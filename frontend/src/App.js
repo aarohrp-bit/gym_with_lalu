@@ -5,6 +5,8 @@ import AddProfile from "@/pages/AddProfile";
 import PinPad from "@/pages/PinPad";
 import Dashboard from "@/pages/Dashboard";
 import DayDetail from "@/pages/DayDetail";
+import Workout from "@/pages/Workout";
+import Summary from "@/pages/Summary";
 
 function App() {
   return (
@@ -16,6 +18,8 @@ function App() {
           <Route path="/pin/:profileId" element={<PinPad />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/day/:day" element={<DayDetail />} />
+          <Route path="/workout/:day" element={<Workout />} />
+          <Route path="/summary/:day" element={<Summary />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

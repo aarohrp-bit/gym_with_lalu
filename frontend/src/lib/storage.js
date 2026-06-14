@@ -2,7 +2,10 @@
 
 const KEY = "gym_lalu_v1";
 
-const empty = () => ({ profiles: [], progress: {} });
+const empty = () => ({ profiles: [], progress: {}, workouts: {} });
+
+// Per-day workout target — day is "done" at exactly this many A-card completions.
+export const POINTS_TARGET = 5;
 
 export const load = () => {
   try {
@@ -12,6 +15,7 @@ export const load = () => {
     if (!parsed || typeof parsed !== "object") return empty();
     parsed.profiles ||= [];
     parsed.progress ||= {};
+    parsed.workouts ||= {};
     return parsed;
   } catch {
     return empty();
@@ -58,6 +62,75 @@ export const setDayStatus = (profileId, weekStartIso, dayNum, status) => {
   data.progress[profileId] ||= {};
   data.progress[profileId][weekStartIso] ||= {};
   data.progress[profileId][weekStartIso][dayNum] = status;
+  save(data);
+};
+
+// ── Workouts ────────────────────────────────────────────────────────────────
+// workouts[profileId][weekStartIso][dayNum] = {
+//   completions: [{ exerciseId, name, completedAt: ISO }],
+//   dayCompleted: boolean,
+//   startedAt: ISO,
+//   finishedAt: ISO | null
+// }
+export const getWorkout = (profileId, weekStartIso, dayNum) => {
+  const data = load();
+  return (
+    (data.workouts[profileId] &&
+      data.workouts[profileId][weekStartIso] &&
+      data.workouts[profileId][weekStartIso][dayNum]) || null
+  );
+};
+
+const ensureWorkout = (data, profileId, weekStartIso, dayNum) => {
+  data.workouts[profileId] ||= {};
+  data.workouts[profileId][weekStartIso] ||= {};
+  if (!data.workouts[profileId][weekStartIso][dayNum]) {
+    data.workouts[profileId][weekStartIso][dayNum] = {
+      completions: [],
+      dayCompleted: false,
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+    };
+  }
+  return data.workouts[profileId][weekStartIso][dayNum];
+};
+
+export const addCompletion = (profileId, weekStartIso, dayNum, exerciseId, name) => {
+  const data = load();
+  const w = ensureWorkout(data, profileId, weekStartIso, dayNum);
+  // Prevent duplicates
+  if (w.completions.find((c) => c.exerciseId === exerciseId)) {
+    save(data);
+    return w;
+  }
+  if (w.dayCompleted) {
+    save(data);
+    return w;
+  }
+  w.completions.push({
+    exerciseId,
+    name,
+    completedAt: new Date().toISOString(),
+  });
+  if (w.completions.length >= POINTS_TARGET) {
+    w.dayCompleted = true;
+    w.finishedAt = new Date().toISOString();
+    data.progress[profileId] ||= {};
+    data.progress[profileId][weekStartIso] ||= {};
+    data.progress[profileId][weekStartIso][dayNum] = "done";
+  }
+  save(data);
+  return w;
+};
+
+export const resetWorkout = (profileId, weekStartIso, dayNum) => {
+  const data = load();
+  if (data.workouts[profileId]?.[weekStartIso]?.[dayNum]) {
+    delete data.workouts[profileId][weekStartIso][dayNum];
+  }
+  if (data.progress[profileId]?.[weekStartIso]?.[dayNum] === "done") {
+    delete data.progress[profileId][weekStartIso][dayNum];
+  }
   save(data);
 };
 
