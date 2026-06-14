@@ -2,8 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, RotateCw, ArrowRight, Zap, Play, Lock } from "lucide-react";
-import { DAY_META, EXERCISES } from "@/data/exercises";
-import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds } from "@/lib/storage";
+import { DAY_META, EXERCISES_BY_CATEGORY } from "@/data/exercises";
+import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds, getWeeklyMapping } from "@/lib/storage";
 import { mondayKey } from "@/lib/week";
 import CircuitRunner from "@/components/CircuitRunner";
 
@@ -34,14 +34,19 @@ export default function Workout() {
   // Eligible cards: ALL types (A + B), not yet completed
   // Sorted ascending by lifetime completion count (least-done first); guest = stable default order.
   const counts = useMemo(() => (pid ? getCounts(pid) : {}), [pid]);
+  const category = useMemo(() => {
+    if (!pid) return null;
+    if (meta?.rest) return "Rest";
+    return getWeeklyMapping(pid, weekStart)[dayNum] || null;
+  }, [pid, weekStart, dayNum, meta]);
   const allCards = useMemo(() => {
-    const base = EXERCISES[dayNum] || [];
+    const base = category ? EXERCISES_BY_CATEGORY[category] || [] : [];
     if (!pid || pid === "guest") return base;
     return base
       .map((e, i) => ({ e, i, c: counts[e.id] || 0 }))
       .sort((a, b) => a.c - b.c || a.i - b.i)
       .map((x) => x.e);
-  }, [dayNum, pid, counts]);
+  }, [category, pid, counts]);
   const remaining = useMemo(
     () => allCards.filter((e) => !completedIds.has(e.id)),
     [allCards, completedIds]
@@ -145,7 +150,7 @@ export default function Workout() {
         </button>
         <div className="text-right">
           <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-body">{meta.label} · Day {meta.day}</p>
-          <p className="font-display text-xl text-white uppercase tracking-tight -mt-0.5">{meta.title}</p>
+          <p className="font-display text-xl text-white uppercase tracking-tight -mt-0.5" data-testid="workout-category">{category || "—"}</p>
         </div>
       </div>
 

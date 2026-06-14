@@ -2,9 +2,9 @@ import React, { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronLeft, Play, CheckCircle2, Sparkles } from "lucide-react";
-import { DAY_META, EXERCISES } from "@/data/exercises";
+import { DAY_META, EXERCISES_BY_CATEGORY } from "@/data/exercises";
 import { CATEGORY_BLURBS } from "@/data/categoryBlurbs";
-import { getActive, getWorkout, resetWorkout } from "@/lib/storage";
+import { getActive, getWorkout, resetWorkout, getWeeklyMapping } from "@/lib/storage";
 import { mondayKey } from "@/lib/week";
 import StatusBadge from "@/components/StatusBadge";
 
@@ -13,12 +13,14 @@ export default function DayDetail() {
   const navigate = useNavigate();
   const dayNum = Number(day);
   const meta = DAY_META.find((d) => d.day === dayNum);
-  const blurb = meta ? CATEGORY_BLURBS[meta.title] : null;
   const weekStart = useMemo(() => mondayKey(), []);
   const active = getActive();
   const pid = active ? (active.isGuest ? "guest" : active.profileId) : null;
+  const mapping = useMemo(() => (pid ? getWeeklyMapping(pid, weekStart) : {}), [pid, weekStart]);
+  const category = meta?.rest ? "Rest" : mapping[dayNum];
+  const blurb = category ? CATEGORY_BLURBS[category] : null;
   const workout = pid ? getWorkout(pid, weekStart, dayNum) : null;
-  const exercises = EXERCISES[dayNum] || [];
+  const exercises = category ? EXERCISES_BY_CATEGORY[category] || [] : [];
   const aCount = exercises.length;
   const completedCount = workout?.completions?.length || 0;
   const status = workout?.dayCompleted ? "done" : "pending";
@@ -73,7 +75,7 @@ export default function DayDetail() {
           data-testid="day-detail-title"
           className="font-display text-6xl font-bold text-white uppercase tracking-tight leading-none"
         >
-          {meta.title}
+          {meta.rest ? "Rest" : category || "—"}
         </h1>
 
         {blurb && (

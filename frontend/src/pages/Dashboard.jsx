@@ -1,33 +1,63 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronRight, LogOut, Moon, Dumbbell } from "lucide-react";
-import { getActive, clearActive, getWeekProgress, getProfile } from "@/lib/storage";
+import { ChevronRight, LogOut, Moon, Dumbbell, RefreshCw } from "lucide-react";
+import {
+  getActive,
+  clearActive,
+  getWeekProgress,
+  getProfile,
+  getWeeklyMapping,
+  regenerateWeeklyMapping,
+} from "@/lib/storage";
 import { mondayKey, todayDayNum } from "@/lib/week";
-import { DAY_META, EXERCISES } from "@/data/exercises";
+import { DAY_META, EXERCISES_BY_CATEGORY } from "@/data/exercises";
 import StatusBadge from "@/components/StatusBadge";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [active, setActive] = useState(null);
-  const [progress, setProgress] = useState({});
+  const [active] = useState(() => getActive());
+  const [tick, setTick] = useState(0);
   const weekStart = useMemo(() => mondayKey(), []);
   const today = todayDayNum();
 
   useEffect(() => {
-    const a = getActive();
-    if (!a) { navigate("/"); return; }
-    setActive(a);
-    const pid = a.isGuest ? "guest" : a.profileId;
-    setProgress(getWeekProgress(pid, weekStart));
-  }, [navigate, weekStart]);
+    if (!active) navigate("/");
+  }, [active, navigate]);
 
-  const onLogout = () => { clearActive(); navigate("/"); };
+  const pid = active ? (active.isGuest ? "guest" : active.profileId) : null;
+  const progress = useMemo(
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => (pid ? getWeekProgress(pid, weekStart) : {}),
+    [pid, weekStart, tick]
+  );
+  const mapping = useMemo(
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    () => (pid ? getWeeklyMapping(pid, weekStart) : {}),
+    [pid, weekStart, tick]
+  );
+
+  const onLogout = () => {
+    clearActive();
+    navigate("/");
+  };
   const onOpenDay = (day) => navigate(`/day/${day}`);
+
+  const onStartNewWeek = () => {
+    if (!pid) return;
+    const ok = window.confirm(
+      "Start a new week? This will regenerate the day-to-category mapping and clear this week's progress."
+    );
+    if (!ok) return;
+    regenerateWeeklyMapping(pid, weekStart);
+    setTick((t) => t + 1);
+  };
 
   if (!active) return null;
   const profile = active.isGuest ? { name: "Guest" } : getProfile(active.profileId);
-  const doneCount = Object.entries(progress).filter(([d, s]) => Number(d) <= 6 && s === "done").length;
+  const doneCount = Object.entries(progress).filter(
+    ([d, s]) => Number(d) <= 6 && s === "done"
+  ).length;
 
   return (
     <div className="w-full max-w-md mx-auto px-6 pt-10 pb-24 min-h-screen">
@@ -52,7 +82,7 @@ export default function Dashboard() {
       </div>
 
       {/* Progress summary */}
-      <div className="mb-8 p-5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-4">
+      <div className="mb-4 p-5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-4">
         <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
           <Dumbbell className="w-5 h-5 text-indigo-400" strokeWidth={1.75} />
         </div>
@@ -64,17 +94,29 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* Start new week */}
+      <button
+        data-testid="start-new-week-button"
+        onClick={onStartNewWeek}
+        className="w-full mb-8 px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 active:bg-slate-800 flex items-center justify-center gap-2 text-slate-300 font-body text-sm"
+      >
+        <RefreshCw className="w-4 h-4 text-slate-400" strokeWidth={1.75} />
+        Start new week
+      </button>
+
       {/* Day tiles */}
       <div className="flex flex-col gap-3" data-testid="day-tiles">
         {DAY_META.map((d, idx) => {
           const status = progress[d.day] || "pending";
           const isToday = d.day === today;
-          const cardCount = EXERCISES[d.day]?.length || 0;
           const restTile = d.rest;
+          const category = restTile ? "Rest" : mapping[d.day] || "—";
+          const cardCount = restTile ? 0 : EXERCISES_BY_CATEGORY[category]?.length || 0;
           return (
             <motion.button
               key={d.day}
               data-testid={`day-tile-${d.label.toLowerCase()}`}
+              data-category={category}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.04 * idx, duration: 0.3 }}
@@ -93,7 +135,12 @@ export default function Dashboard() {
                   </p>
                 </div>
                 <div>
-                  <p className="font-display text-2xl text-white uppercase tracking-tight leading-none">{d.title}</p>
+                  <p
+                    className="font-display text-2xl text-white uppercase tracking-tight leading-none"
+                    data-testid={`day-tile-title-${d.label.toLowerCase()}`}
+                  >
+                    {restTile ? "Rest" : category}
+                  </p>
                   <p className="text-slate-500 text-xs font-body mt-1 flex items-center gap-1.5">
                     {restTile ? <><Moon className="w-3 h-3" /> Recover</> : `${cardCount} exercises`}
                   </p>

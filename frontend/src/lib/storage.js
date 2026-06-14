@@ -1,8 +1,9 @@
 // LocalStorage helpers for Gym with Lalu (no backend)
+import { generateWeeklyMapping } from "@/lib/weeklyCategory";
 
 const KEY = "gym_lalu_v1";
 
-const empty = () => ({ profiles: [], progress: {}, workouts: {} });
+const empty = () => ({ profiles: [], progress: {}, workouts: {}, weeklyMappings: {} });
 
 // Per-day workout target — day is "done" at exactly this many A-card completions.
 export const POINTS_TARGET = 5;
@@ -29,6 +30,7 @@ export const load = () => {
     parsed.workouts ||= {};
     parsed.counts ||= {};
     parsed.lastCompletionAt ||= {};
+    parsed.weeklyMappings ||= {};
     return parsed;
   } catch {
     return empty();
@@ -162,6 +164,51 @@ export const getCounts = (profileId) => {
 export const getLastCompletionAt = (profileId) => {
   const data = load();
   return data.lastCompletionAt[profileId] || null;
+};
+
+// ── Weekly category mapping (per profile, per week) ────────────────────────
+// mapping shape: { 1: "Shoulders", 2: "Chest", ..., 6: "Biceps", 7: "Rest" }
+// Generated once per (profile, weekStartIso); persisted; refresh rule enforced
+// against the most-recent prior week's mapping for that profile.
+
+const findPrevMapping = (data, profileId, weekStartIso) => {
+  const all = data.weeklyMappings[profileId] || {};
+  const priorKey = Object.keys(all)
+    .filter((w) => w < weekStartIso)
+    .sort()
+    .pop();
+  return priorKey ? all[priorKey] : null;
+};
+
+export const getWeeklyMapping = (profileId, weekStartIso) => {
+  const data = load();
+  data.weeklyMappings[profileId] ||= {};
+  const existing = data.weeklyMappings[profileId][weekStartIso];
+  if (existing) return existing;
+  const prev = findPrevMapping(data, profileId, weekStartIso);
+  const mapping = generateWeeklyMapping(prev);
+  data.weeklyMappings[profileId][weekStartIso] = mapping;
+  save(data);
+  return mapping;
+};
+
+export const regenerateWeeklyMapping = (profileId, weekStartIso) => {
+  const data = load();
+  data.weeklyMappings[profileId] ||= {};
+  // The mapping currently stored at this week (about to be replaced) is what
+  // the user is refreshing away from — use it as the "previous" reference so
+  // the refresh rule still applies on same-week regenerations. Fall back to the
+  // most-recent strictly-earlier mapping if no current mapping exists.
+  const prev =
+    data.weeklyMappings[profileId][weekStartIso] ||
+    findPrevMapping(data, profileId, weekStartIso);
+  const mapping = generateWeeklyMapping(prev);
+  data.weeklyMappings[profileId][weekStartIso] = mapping;
+  // Clear week progress + workouts for this profile + week.
+  if (data.progress[profileId]) delete data.progress[profileId][weekStartIso];
+  if (data.workouts[profileId]) delete data.workouts[profileId][weekStartIso];
+  save(data);
+  return mapping;
 };
 
 // Active profile session helpers (sessionStorage so refresh remembers, but new tab = relock)
