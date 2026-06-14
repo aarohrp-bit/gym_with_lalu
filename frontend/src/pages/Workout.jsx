@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, RotateCw, ArrowRight, Zap, Play, Lock } from "lucide-react";
+import { ChevronLeft, RotateCw, ArrowRight, ArrowUp, Zap, Play, Lock } from "lucide-react";
 import { DAY_META, EXERCISES_BY_CATEGORY } from "@/data/exercises";
 import { imageForExerciseId } from "@/data/exerciseImages";
 import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds, getWeeklyMapping, getActiveSeed } from "@/lib/storage";
@@ -31,6 +31,11 @@ export default function Workout() {
   const [flipped, setFlipped] = useState(false);
   const [completingId, setCompletingId] = useState(null);
   const [circuitOpen, setCircuitOpen] = useState(false);
+  // viewIdx lets the user "skip" to a different not-yet-completed card via swipe-up.
+  // It indexes into `remaining` (mod length), is purely a view change — no points,
+  // no completion, not blocked by the guard.
+  const [viewIdx, setViewIdx] = useState(0);
+  const [skipping, setSkipping] = useState(false);
   const lastTap = useRef(0);
 
   // Eligible cards: ALL types (A + B), not yet completed
@@ -97,10 +102,13 @@ export default function Workout() {
 
   if (!meta || meta.rest || !pid) return null;
 
-  const top = remaining[0];
+  // `top` is the card currently shown. viewIdx allows the user to skip past the
+  // natural first-in-stack card via swipe-up to reach (e.g.) the day's circuit card.
+  const safeViewIdx = remaining.length ? viewIdx % remaining.length : 0;
+  const top = remaining[safeViewIdx];
 
   const handleTap = () => {
-    if (!top || completingId || top.type === "B") return;
+    if (!top || completingId || skipping || top.type === "B") return;
     const now = Date.now();
     if (now - lastTap.current < 300) {
       setFlipped((f) => !f);
@@ -111,7 +119,7 @@ export default function Workout() {
   };
 
   const completeTop = () => {
-    if (!top || completingId || top.type === "B" || guardActive) return;
+    if (!top || completingId || skipping || top.type === "B" || guardActive) return;
     setCompletingId(top.id);
     addCompletion(pid, weekStart, dayNum, top.id, top.name);
     setTimeout(() => {
@@ -123,12 +131,36 @@ export default function Workout() {
       setPoints((p) => p + 1);
       setFlipped(false);
       setCompletingId(null);
+      // After a completion, the just-removed card was at safeViewIdx; the new
+      // top should be remaining[0] of the next render, so reset viewIdx.
+      setViewIdx(0);
     }, 320);
   };
 
+  // Swipe-up: cycle viewIdx forward (modulo remaining.length). No points, no
+  // completion, NOT blocked by the guard — purely a view change so the user
+  // can reach any card (e.g. the day's circuit B card).
+  const skipUp = () => {
+    if (!top || completingId || skipping) return;
+    if (remaining.length <= 1) return; // nothing to cycle to
+    setSkipping(true);
+    setFlipped(false);
+    setTimeout(() => {
+      setViewIdx((i) => (i + 1) % remaining.length);
+      setSkipping(false);
+    }, 260);
+  };
+
   const onDragEnd = (_, info) => {
-    if (top?.type === "B" || guardActive) return;
-    if (info.offset.x > 110 && info.velocity.x > -100) {
+    if (completingId || skipping) return;
+    const { x, y } = info.offset;
+    // Vertical dominant → maybe skip-up.
+    if (Math.abs(y) > Math.abs(x) && y < -80) {
+      skipUp();
+      return;
+    }
+    // Horizontal dominant → maybe complete (A only, not guarded).
+    if (x > 110 && (info.velocity?.x ?? 0) > -100 && top?.type === "A" && !guardActive) {
       completeTop();
     }
   };
@@ -143,6 +175,7 @@ export default function Workout() {
     });
     setPoints((p) => p + 1);
     setCircuitOpen(false);
+    setViewIdx(0);
   };
 
   const onCircuitAbort = () => {
@@ -150,7 +183,13 @@ export default function Workout() {
   };
 
   const dayDone = points >= POINTS_TARGET;
-  const next2 = remaining.slice(1, 3); // peek behind cards
+  // Peek-behind cards = the two not-currently-visible remaining cards (wrap
+  // around so skip-up still shows depth).
+  const next2 = remaining.length > 1
+    ? [1, 2]
+        .map((k) => remaining[(safeViewIdx + k) % remaining.length])
+        .filter((c, i, arr) => c && arr.indexOf(c) === i && c.id !== top?.id)
+    : [];
 
   return (
     <div className="w-full max-w-md mx-auto px-6 pt-6 pb-10 min-h-screen flex flex-col">
@@ -227,18 +266,20 @@ export default function Workout() {
             <motion.div
               key={top.id}
               data-testid={`workout-card-${top.id}`}
-              drag={!completingId && top.type === "A" ? "x" : false}
-              dragConstraints={{ left: -30, right: 400 }}
+              drag={!completingId && !skipping}
+              dragConstraints={{ top: -60, left: -30, right: 400, bottom: 30 }}
               dragElastic={0.25}
               onDragEnd={onDragEnd}
               onTap={handleTap}
               animate={
                 completingId === top.id
-                  ? { x: 500, opacity: 0, rotate: 8 }
-                  : { x: 0, opacity: 1, rotate: 0 }
+                  ? { x: 500, y: 0, opacity: 0, rotate: 8 }
+                  : skipping
+                  ? { x: 0, y: -600, opacity: 0, rotate: -2 }
+                  : { x: 0, y: 0, opacity: 1, rotate: 0 }
               }
               transition={{ type: "spring", stiffness: 260, damping: 28 }}
-              className={`relative w-full aspect-[3/4] rounded-3xl ${top.type === "A" ? "cursor-grab active:cursor-grabbing touch-none" : ""}`}
+              className="relative w-full aspect-[3/4] rounded-3xl cursor-grab active:cursor-grabbing touch-none"
               style={{ transformStyle: "preserve-3d" }}
             >
               {top.type === "B" ? (
@@ -313,7 +354,7 @@ export default function Workout() {
                       {top.name}
                     </h2>
                     <p className="text-slate-500 text-xs font-body mt-2 uppercase tracking-wider">
-                      Double-tap to flip · Swipe right to complete
+                      Double-tap to flip · Swipe up to skip · Swipe right to complete
                     </p>
                   </div>
 
@@ -358,20 +399,32 @@ export default function Workout() {
       </div>
 
       {/* Swipe hint */}
-      {!dayDone && top && top.type === "A" && (
-        <div className="flex items-center justify-center gap-2 text-slate-500 text-xs font-body mt-4">
-          <span>Swipe</span>
-          <motion.span
-            animate={{ x: [0, 8, 0] }}
-            transition={{ duration: 1.2, repeat: Infinity }}
-          >
-            <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
-          </motion.span>
-          <span>to mark complete</span>
+      {!dayDone && top && (
+        <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-slate-500 text-xs font-body mt-4" data-testid="swipe-hint">
+          <span className="flex items-center gap-1.5">
+            <motion.span
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 1.2, repeat: Infinity }}
+            >
+              <ArrowUp className="w-4 h-4" strokeWidth={1.5} />
+            </motion.span>
+            Swipe up to skip
+          </span>
+          {top.type === "A" && (
+            <span className="flex items-center gap-1.5">
+              <motion.span
+                animate={{ x: [0, 8, 0] }}
+                transition={{ duration: 1.2, repeat: Infinity }}
+              >
+                <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
+              </motion.span>
+              Swipe right to complete
+            </span>
+          )}
         </div>
       )}
 
-      {/* Hidden complete button for accessibility / testing fallback (A cards only) */}
+      {/* Hidden buttons for accessibility / testing fallback */}
       {!dayDone && top && top.type === "A" && (
         <button
           data-testid="complete-top-card"
@@ -380,6 +433,16 @@ export default function Workout() {
           aria-label="Mark current card complete"
         >
           Complete
+        </button>
+      )}
+      {!dayDone && top && remaining.length > 1 && (
+        <button
+          data-testid="skip-top-card"
+          onClick={skipUp}
+          className="sr-only"
+          aria-label="Skip to next card"
+        >
+          Skip
         </button>
       )}
 
