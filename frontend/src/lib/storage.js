@@ -1,9 +1,16 @@
 // LocalStorage helpers for Gym with Lalu (no backend)
 import { generateWeeklyMapping } from "@/lib/weeklyCategory";
+import { deriveSeededMapping, normalizeSeed } from "@/lib/seed";
 
 const KEY = "gym_lalu_v1";
 
-const empty = () => ({ profiles: [], progress: {}, workouts: {}, weeklyMappings: {} });
+const empty = () => ({
+  profiles: [],
+  progress: {},
+  workouts: {},
+  weeklyMappings: {},
+  activeSeed: {},
+});
 
 // Per-day workout target — day is "done" at exactly this many A-card completions.
 export const POINTS_TARGET = 5;
@@ -31,6 +38,7 @@ export const load = () => {
     parsed.counts ||= {};
     parsed.lastCompletionAt ||= {};
     parsed.weeklyMappings ||= {};
+    parsed.activeSeed ||= {};
     return parsed;
   } catch {
     return empty();
@@ -207,8 +215,71 @@ export const regenerateWeeklyMapping = (profileId, weekStartIso) => {
   // Clear week progress + workouts for this profile + week.
   if (data.progress[profileId]) delete data.progress[profileId][weekStartIso];
   if (data.workouts[profileId]) delete data.workouts[profileId][weekStartIso];
+  // "Start new week" also clears any active seed for this profile.
+  if (data.activeSeed[profileId]) delete data.activeSeed[profileId];
   save(data);
   return mapping;
+};
+
+// ── Seed system (deterministic week generation across devices) ─────────────
+// data.activeSeed[profileId] = { seed: string, weekStartIso: string }
+// A seed holds exactly ONE week and auto-clears when (a) the user clears it,
+// (b) that week's 6 training days are all completed, or (c) a new week starts.
+
+const isWeekFullyDone = (data, profileId, weekStartIso) => {
+  const wp = data.progress[profileId]?.[weekStartIso];
+  if (!wp) return false;
+  for (let d = 1; d <= 6; d++) {
+    if (wp[d] !== "done") return false;
+  }
+  return true;
+};
+
+// Returns the active seed string for this profile if it's still valid for the
+// current week; otherwise auto-clears and returns null. Persists the clear.
+export const getActiveSeed = (profileId, currentWeekStartIso) => {
+  const data = load();
+  const entry = data.activeSeed[profileId];
+  if (!entry) return null;
+  // Stale (new week began since seed was applied) → clear.
+  if (entry.weekStartIso !== currentWeekStartIso) {
+    delete data.activeSeed[profileId];
+    save(data);
+    return null;
+  }
+  // Week fully completed → clear.
+  if (isWeekFullyDone(data, profileId, currentWeekStartIso)) {
+    delete data.activeSeed[profileId];
+    save(data);
+    return null;
+  }
+  return entry.seed;
+};
+
+// Apply a seed: derive the day-to-category mapping deterministically from it
+// and overwrite the stored mapping for this profile/week. Returns the mapping
+// (or null if the seed is empty after normalisation).
+export const applySeed = (profileId, weekStartIso, rawSeed) => {
+  const seed = normalizeSeed(rawSeed);
+  if (!seed) return null;
+  const data = load();
+  data.weeklyMappings[profileId] ||= {};
+  const mapping = deriveSeededMapping(seed);
+  data.weeklyMappings[profileId][weekStartIso] = mapping;
+  data.activeSeed[profileId] = { seed, weekStartIso };
+  // Clear any prior progress for this week so the seeded week starts fresh.
+  if (data.progress[profileId]) delete data.progress[profileId][weekStartIso];
+  if (data.workouts[profileId]) delete data.workouts[profileId][weekStartIso];
+  save(data);
+  return mapping;
+};
+
+export const clearSeed = (profileId) => {
+  const data = load();
+  if (data.activeSeed[profileId]) {
+    delete data.activeSeed[profileId];
+    save(data);
+  }
 };
 
 // Active profile session helpers (sessionStorage so refresh remembers, but new tab = relock)

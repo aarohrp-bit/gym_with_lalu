@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronRight, LogOut, Moon, Dumbbell, RefreshCw } from "lucide-react";
+import { ChevronRight, LogOut, Moon, Dumbbell, RefreshCw, KeyRound, X } from "lucide-react";
 import {
   getActive,
   clearActive,
@@ -9,6 +9,9 @@ import {
   getProfile,
   getWeeklyMapping,
   regenerateWeeklyMapping,
+  getActiveSeed,
+  applySeed,
+  clearSeed,
 } from "@/lib/storage";
 import { mondayKey, todayDayNum } from "@/lib/week";
 import { DAY_META, EXERCISES_BY_CATEGORY } from "@/data/exercises";
@@ -26,16 +29,21 @@ export default function Dashboard() {
   }, [active, navigate]);
 
   const pid = active ? (active.isGuest ? "guest" : active.profileId) : null;
+  /* eslint-disable react-hooks/exhaustive-deps */
   const progress = useMemo(
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     () => (pid ? getWeekProgress(pid, weekStart) : {}),
     [pid, weekStart, tick]
   );
   const mapping = useMemo(
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     () => (pid ? getWeeklyMapping(pid, weekStart) : {}),
     [pid, weekStart, tick]
   );
+  const activeSeed = useMemo(
+    () => (pid ? getActiveSeed(pid, weekStart) : null),
+    [pid, weekStart, tick]
+  );
+  /* eslint-enable react-hooks/exhaustive-deps */
+  const [seedInput, setSeedInput] = useState("");
 
   const onLogout = () => {
     clearActive();
@@ -50,6 +58,21 @@ export default function Dashboard() {
     );
     if (!ok) return;
     regenerateWeeklyMapping(pid, weekStart);
+    setTick((t) => t + 1);
+  };
+
+  const onApplySeed = () => {
+    if (!pid) return;
+    const s = (seedInput || "").trim();
+    if (!s) return;
+    applySeed(pid, weekStart, s);
+    setSeedInput("");
+    setTick((t) => t + 1);
+  };
+
+  const onClearSeed = () => {
+    if (!pid) return;
+    clearSeed(pid);
     setTick((t) => t + 1);
   };
 
@@ -92,6 +115,57 @@ export default function Dashboard() {
           </p>
           <p className="text-slate-400 text-sm font-body -mt-0.5">this week</p>
         </div>
+      </div>
+
+      {/* Seed input / active seed indicator */}
+      <div className="mb-3" data-testid="seed-panel">
+        {activeSeed ? (
+          <div
+            className="px-4 py-3 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-between gap-3"
+            data-testid="active-seed-indicator"
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <KeyRound className="w-4 h-4 text-indigo-300 flex-shrink-0" strokeWidth={1.75} />
+              <div className="min-w-0">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-300/80 font-body">Seeded week</p>
+                <p
+                  className="font-display text-base text-white tracking-tight truncate"
+                  data-testid="active-seed-value"
+                >
+                  {activeSeed}
+                </p>
+              </div>
+            </div>
+            <button
+              data-testid="clear-seed-button"
+              onClick={onClearSeed}
+              className="w-9 h-9 rounded-full bg-slate-900/60 border border-slate-700 flex items-center justify-center active:bg-slate-800"
+              aria-label="Clear seed"
+            >
+              <X className="w-4 h-4 text-slate-300" strokeWidth={1.75} />
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              data-testid="seed-input"
+              type="text"
+              value={seedInput}
+              onChange={(e) => setSeedInput(e.target.value)}
+              placeholder="Enter a seed to share a week"
+              className="flex-1 px-4 py-3 rounded-2xl bg-slate-900 border border-slate-800 text-white font-body text-sm placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/40"
+              onKeyDown={(e) => { if (e.key === "Enter") onApplySeed(); }}
+            />
+            <button
+              data-testid="apply-seed-button"
+              onClick={onApplySeed}
+              disabled={!seedInput.trim()}
+              className="px-4 rounded-2xl bg-indigo-400 text-slate-950 font-body font-semibold text-sm active:bg-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Apply
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Start new week */}

@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, RotateCw, ArrowRight, Zap, Play, Lock } from "lucide-react";
 import { DAY_META, EXERCISES_BY_CATEGORY } from "@/data/exercises";
-import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds, getWeeklyMapping } from "@/lib/storage";
+import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds, getWeeklyMapping, getActiveSeed } from "@/lib/storage";
+import { deriveSeededCardOrders } from "@/lib/seed";
 import { mondayKey } from "@/lib/week";
 import CircuitRunner from "@/components/CircuitRunner";
 
@@ -34,6 +35,7 @@ export default function Workout() {
   // Eligible cards: ALL types (A + B), not yet completed
   // Sorted ascending by lifetime completion count (least-done first); guest = stable default order.
   const counts = useMemo(() => (pid ? getCounts(pid) : {}), [pid]);
+  const activeSeed = useMemo(() => (pid ? getActiveSeed(pid, weekStart) : null), [pid, weekStart]);
   const category = useMemo(() => {
     if (!pid) return null;
     if (meta?.rest) return "Rest";
@@ -41,12 +43,25 @@ export default function Workout() {
   }, [pid, weekStart, dayNum, meta]);
   const allCards = useMemo(() => {
     const base = category ? EXERCISES_BY_CATEGORY[category] || [] : [];
-    if (!pid || pid === "guest") return base;
+    if (!category || !pid) return base;
+    // Seed active → deterministic order (identical on every device using the same seed).
+    if (activeSeed) {
+      const orders = deriveSeededCardOrders(activeSeed);
+      const idOrder = orders[category] || [];
+      const byId = Object.fromEntries(base.map((e) => [e.id, e]));
+      const ordered = idOrder.map((id) => byId[id]).filter(Boolean);
+      // Append any new cards not in the seeded order (defensive) at the end.
+      const seen = new Set(idOrder);
+      for (const e of base) if (!seen.has(e.id)) ordered.push(e);
+      return ordered;
+    }
+    if (pid === "guest") return base;
+    // Default: least-done first.
     return base
       .map((e, i) => ({ e, i, c: counts[e.id] || 0 }))
       .sort((a, b) => a.c - b.c || a.i - b.i)
       .map((x) => x.e);
-  }, [category, pid, counts]);
+  }, [category, pid, counts, activeSeed]);
   const remaining = useMemo(
     () => allCards.filter((e) => !completedIds.has(e.id)),
     [allCards, completedIds]
