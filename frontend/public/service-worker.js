@@ -1,5 +1,5 @@
 /* Gym with Lalu — App Shell + Image Service Worker */
-const CACHE_NAME = "gym-with-lalu-v2";
+const CACHE_NAME = "gym-with-lalu-v3";
 
 const APP_SHELL = [
   "/",
@@ -48,6 +48,17 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Network-first for the app shell + app code so a new deploy is never trapped behind a
+// stale cache (CRA dev serves an UN-hashed /static/js/bundle.js, which a cache-first SW
+// would pin forever). Cache-first for images, which are immutable and keyed by id.
+const isShellOrCode = (url, req) =>
+  req.mode === "navigate" ||
+  url.pathname === "/" ||
+  url.pathname === "/index.html" ||
+  url.pathname.startsWith("/static/") ||
+  url.pathname.endsWith(".js") ||
+  url.pathname.endsWith(".css");
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
@@ -55,6 +66,25 @@ self.addEventListener("fetch", (event) => {
   // Don't intercept cross-origin (e.g. fonts CDN — handled by the browser cache).
   if (url.origin !== self.location.origin) return;
 
+  if (isShellOrCode(url, req)) {
+    // Network-first: always try fresh code, fall back to cache offline.
+    event.respondWith(
+      fetch(req)
+        .then((res) => {
+          if (res && res.status === 200 && res.type === "basic") {
+            const copy = res.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() =>
+          caches.match(req).then((cached) => cached || caches.match("/index.html"))
+        )
+    );
+    return;
+  }
+
+  // Cache-first for everything else (images, manifest, icon).
   event.respondWith(
     caches.match(req).then((cached) => {
       const network = fetch(req)
@@ -65,8 +95,7 @@ self.addEventListener("fetch", (event) => {
           }
           return res;
         })
-        .catch(() => cached || caches.match("/index.html"));
-      // Cache-first for speed/offline; fall back to network.
+        .catch(() => cached);
       return cached || network;
     })
   );
