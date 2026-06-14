@@ -1,5 +1,5 @@
 /* Gym with Lalu — App Shell Service Worker */
-const CACHE_NAME = "gym-with-lalu-v1";
+const CACHE_NAME = "gym-with-lalu-v2";
 const APP_SHELL = [
   "/",
   "/index.html",

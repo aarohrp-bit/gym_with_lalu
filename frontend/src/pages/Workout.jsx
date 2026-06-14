@@ -217,7 +217,7 @@ export default function Workout() {
                   : { x: 0, opacity: 1, rotate: 0 }
               }
               transition={{ type: "spring", stiffness: 260, damping: 28 }}
-              className={`relative w-full aspect-[3/4] rounded-3xl ${top.type === "A" ? "cursor-grab active:cursor-grabbing touch-none" : ""}`}
+              className={`relative w-full aspect-[9/19] rounded-3xl ${top.type === "A" ? "cursor-grab active:cursor-grabbing touch-none" : ""}`}
               style={{ transformStyle: "preserve-3d" }}
             >
               {top.type === "B" ? (
@@ -272,10 +272,14 @@ export default function Workout() {
                         {points + 1} of stack
                       </p>
                     </div>
-                    <div className="flex-1 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center p-6 mb-5">
-                      <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center">
-                        {top.name}
-                      </p>
+                    {/* Image area — fixed 9:16 portrait (matches 768x1376 source). Image fills with object-cover, anchored to top so the printed name on the photo is never cropped. */}
+                    <div className="w-full aspect-[9/16] rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden mb-5">
+                      {/* When the real photo lands, render: <img src={top.image} alt="" className="w-full h-full object-cover object-top" /> */}
+                      <div className="w-full h-full flex items-start justify-center p-4">
+                        <p className="font-body text-slate-400 text-xs uppercase tracking-wider text-center pt-2">
+                          {top.name}
+                        </p>
+                      </div>
                     </div>
                     <h2 className="font-display text-3xl text-white font-bold tracking-tight leading-tight" data-testid="card-name">
                       {top.name}

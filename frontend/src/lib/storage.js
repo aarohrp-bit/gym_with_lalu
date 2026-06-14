@@ -156,12 +156,12 @@ export const resetWorkout = (profileId, weekStartIso, dayNum) => {
 export const getCounts = (profileId) => {
   if (profileId === "guest") return {};
   const data = load();
-  return data.counts[profileId] || {};
+  return (data.counts && data.counts[profileId]) || {};
 };
 
 export const getLastCompletionAt = (profileId) => {
   const data = load();
-  return data.lastCompletionAt[profileId] || null;
+  return (data.lastCompletionAt && data.lastCompletionAt[profileId]) || null;
 };
 
 // Active profile session helpers (sessionStorage so refresh remembers, but new tab = relock)

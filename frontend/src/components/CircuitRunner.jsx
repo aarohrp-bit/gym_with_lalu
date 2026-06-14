@@ -111,7 +111,7 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.25 }}
-          className="w-full aspect-[3/4] rounded-3xl touch-none cursor-grab active:cursor-grabbing"
+          className="w-full aspect-[9/19] rounded-3xl touch-none cursor-grab active:cursor-grabbing"
           style={{ transformStyle: "preserve-3d" }}
           data-testid={`circuit-sub-card-${idx}`}
         >
@@ -125,10 +125,13 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
               className="absolute inset-0 rounded-3xl bg-slate-900 border border-slate-800 p-6 flex flex-col"
               style={{ backfaceVisibility: "hidden" }}
             >
-              <div className="flex-1 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center p-6 mb-4">
-                <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center">
-                  {current}
-                </p>
+              <div className="w-full aspect-[9/16] rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden mb-4">
+                {/* Future: <img src={current.image} className="w-full h-full object-cover object-top" /> */}
+                <div className="w-full h-full flex items-start justify-center p-4">
+                  <p className="font-body text-slate-400 text-xs uppercase tracking-wider text-center pt-2">
+                    {current}
+                  </p>
+                </div>
               </div>
               <h3 className="font-display text-2xl text-white font-bold tracking-tight leading-tight" data-testid="circuit-mini-name">
                 {current}
