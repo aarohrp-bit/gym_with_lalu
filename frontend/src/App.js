@@ -9,6 +9,13 @@ import Workout from "@/pages/Workout";
 import Summary from "@/pages/Summary";
 
 function App() {
+  // Dev hook: ?fastTimer=1 persists across React Router nav via sessionStorage
+  if (typeof window !== "undefined") {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("fastTimer") === "1") {
+      window.sessionStorage.setItem("fastTimer", "1");
+    }
+  }
   return (
     <div className="App" data-testid="app-root">
       <BrowserRouter>

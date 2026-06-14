@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, RotateCw, Flag, Pause } from "lucide-react";
 
 const CIRCUIT_SECONDS = 12 * 60; // 12:00
+const FAST_CIRCUIT_SECONDS = 3; // dev-only fast timer when ?fastTimer=1
 
 const fmtMMSS = (s) => {
   const m = Math.floor(s / 60);
@@ -11,7 +12,12 @@ const fmtMMSS = (s) => {
 };
 
 export default function CircuitRunner({ circuit, onAbort, onFinish }) {
-  const [secondsLeft, setSecondsLeft] = useState(CIRCUIT_SECONDS);
+  const fastTimer =
+    typeof window !== "undefined" &&
+    (window.location.search.includes("fastTimer=1") ||
+      window.sessionStorage?.getItem("fastTimer") === "1");
+  const initialSeconds = fastTimer ? FAST_CIRCUIT_SECONDS : CIRCUIT_SECONDS;
+  const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -20,19 +26,15 @@ export default function CircuitRunner({ circuit, onAbort, onFinish }) {
 
   // Tick down 1s
   useEffect(() => {
-    if (secondsLeft <= 0) return;
-    const id = setInterval(() => setSecondsLeft((s) => (s > 0 ? s - 1 : 0)), 1000);
+    const id = setInterval(() => {
+      setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
     return () => clearInterval(id);
-  }, [secondsLeft]);
+  }, []);
 
-  // Lock browser back during circuit
+  // Lock browser back during circuit — show confirm instead of leaving
   useEffect(() => {
-    const onPop = (e) => {
-      e.preventDefault?.();
-      window.history.pushState(null, "", window.location.href);
-      setConfirming(true);
-    };
-    window.history.pushState(null, "", window.location.href);
+    const onPop = () => setConfirming(true);
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
@@ -195,7 +197,7 @@ export default function CircuitRunner({ circuit, onAbort, onFinish }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-60 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center px-6"
+            className="absolute inset-0 z-[60] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center px-6"
             data-testid="circuit-abort-confirm"
           >
             <motion.div

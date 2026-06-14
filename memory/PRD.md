@@ -3,7 +3,18 @@
 ## Original problem statement
 Build a Progressive Web App (PWA) called "Gym with Lalu" — a personal 6-day gym workout tracker for two users, fully installable to an Android home screen and working offline. React. No backend; everything in localStorage / IndexedDB. No login server, no cloud.
 
-## Phase 2 scope (DELIVERED 2026-02-14)
+## Phase 3 scope (DELIVERED 2026-02-14)
+1. Type B circuit cards now appear in the Day 2 (B2 Power & Conditioning) and Day 6 (B1 Cardio Box) workout stacks at idx 0 (will be re-sorted by least-done in Phase 4).
+2. On the stack, B card renders a circuit variant: name + 6 mini-exercise list + Start button. No swipe-to-complete on the outer card.
+3. `CircuitRunner.jsx` — full-screen z-50 overlay (locks the rest of the app):
+   - Abort fixed at top → confirmation dialog → returns card to stack, no point/penalty.
+   - Horizontal sub-stack of 6 mini-cards, swipe left/right to navigate, double-tap to flip to coaching.
+   - 12:00 countdown fixed at bottom; Finish button disabled until 0:00.
+   - Dev hook: `?fastTimer=1` (persisted via sessionStorage) reduces timer to 3s for testability.
+4. Finish at 0:00 → `addCompletion(...)` with the B card id → +1 point in the shared 5/day pool → card removed from stack; same auto-redirect to `/summary/:day` at 5 fires.
+5. Summary lists the circuit completion like any other exercise (name + HH:MM finish time).
+
+
 1. Day Detail rewritten as an intro screen: category title, "Trains" line, "About" blurb, points indicator `n / 5 done`, and an "Enter workout" button. Rest day shows no Enter button.
 2. New `/workout/:day` Card Stack screen — Type A cards only, one card at a time, swipe-right to complete, double-tap to flip to coaching, counter `n / 5`, peek-behind stack effect, day completes at exactly 5 points.
 3. New `/summary/:day` Daily Summary screen — lists each completed exercise with HH:MM finish time, total session duration (first → last completion), and "Back to Week" button. Marks the day as Done on the dashboard.
