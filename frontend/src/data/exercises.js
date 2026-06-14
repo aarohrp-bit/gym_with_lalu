@@ -1,7 +1,7 @@
 // Hardcoded exercise database for "Gym with Lalu" — with image paths from Gemini mapping.
 const placeholderHow = "How to: short placeholder cue. (Full coaching text comes in a later phase.)";
 const placeholderDoes = "What it does: short placeholder benefit. (Full description comes in a later phase.)";
-const img = (slug) => `/exercises/Gemini_Generated_Image_${slug}.png`;
+const img = (slug) => `/exercises/Gemini_Generated_Image_${slug}.webp`;
 
 const mk = (day, name, image, type = "A", circuit = null) => ({
   id: `d${day}-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`,
@@ -19,7 +19,7 @@ export const DAY_META = [
 ];
 
 // Circuit mini-exercises with images
-const miniImg = (slug) => `/exercises/Gemini_Generated_Image_${slug}.png`;
+const miniImg = (slug) => `/exercises/Gemini_Generated_Image_${slug}.webp`;
 const B2_MINI = [
   { name: "Step Jumping Jacks", image: miniImg("2pvxjw2pvxjw2pvx") },
   { name: "Plate Swings", image: miniImg("5tbvis5tbvis5tbv") },
