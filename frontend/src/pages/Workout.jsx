@@ -253,9 +253,9 @@ export default function Workout() {
                   <div className="flex-1 overflow-hidden">
                     <div className="flex flex-col gap-1.5" data-testid="circuit-mini-list">
                       {(top.circuit?.miniExercises || []).map((m, i) => (
-                        <div key={m} className="flex items-center gap-2 text-sm font-body text-slate-200 bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2">
+                        <div key={m.name} className="flex items-center gap-2 text-sm font-body text-slate-200 bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2">
                           <span className="font-display text-indigo-400 text-xs w-5 text-center">{i + 1}</span>
-                          <span className="truncate">{m}</span>
+                          <span className="truncate">{m.name}</span>
                         </div>
                       ))}
                     </div>
@@ -288,15 +288,9 @@ export default function Workout() {
                         {points + 1} of stack
                       </p>
                     </div>
-                    {/* Image area — fixed 9:16 portrait (matches 768x1376 source). Image fills with object-cover, anchored to top so the printed name on the photo is never cropped. */}
-                    <div className="w-full aspect-[9/16] rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden mb-5">
-                      {/* When the real photo lands, render: <img src={top.image} alt="" className="w-full h-full object-cover object-top" /> */}
-                      <div className="w-full h-full flex items-start justify-center p-4">
-                        <p className="font-body text-slate-400 text-xs uppercase tracking-wider text-center pt-2">
-                          {top.name}
-                        </p>
+                      <div className="w-full aspect-[9/16] rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden mb-5">
+                        <img src={top.image} alt={top.name} loading="lazy" className="w-full h-full object-cover object-top" />
                       </div>
-                    </div>
                     <h2 className="font-display text-3xl text-white font-bold tracking-tight leading-tight" data-testid="card-name">
                       {top.name}
                     </h2>

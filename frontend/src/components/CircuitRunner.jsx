@@ -126,15 +126,10 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
               style={{ backfaceVisibility: "hidden" }}
             >
               <div className="w-full aspect-[9/16] rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden mb-4">
-                {/* Future: <img src={current.image} className="w-full h-full object-cover object-top" /> */}
-                <div className="w-full h-full flex items-start justify-center p-4">
-                  <p className="font-body text-slate-400 text-xs uppercase tracking-wider text-center pt-2">
-                    {current}
-                  </p>
-                </div>
+                <img src={current.image} alt={current.name} loading="lazy" className="w-full h-full object-cover object-top" />
               </div>
               <h3 className="font-display text-2xl text-white font-bold tracking-tight leading-tight" data-testid="circuit-mini-name">
-                {current}
+                {current.name}
               </h3>
               <p className="text-slate-500 text-xs font-body mt-2 uppercase tracking-wider">
                 Double-tap to flip · Swipe to move
@@ -148,9 +143,9 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
                 <p className="text-[10px] uppercase tracking-[0.22em] text-indigo-300/70 font-body">How to perform</p>
                 <RotateCw className="w-3.5 h-3.5 text-indigo-300/60" strokeWidth={1.5} />
               </div>
-              <h3 className="font-display text-2xl text-white font-bold tracking-tight leading-tight mb-4">{current}</h3>
+              <h3 className="font-display text-2xl text-white font-bold tracking-tight leading-tight mb-4">{current.name}</h3>
               <p className="font-body text-slate-200 text-sm leading-relaxed">
-                How to: short placeholder cue for {current}. (Full coaching text comes in a later phase.)
+                How to: short placeholder cue for {current.name}. (Full coaching text comes in a later phase.)
               </p>
               <p className="text-slate-500 text-xs font-body mt-auto uppercase tracking-wider">Double-tap to flip back</p>
             </div>
