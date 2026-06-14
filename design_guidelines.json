@@ -1,0 +1,115 @@
+{
+  "project_name": "Gym with Lalu",
+  "domain": "Fitness, Gym, Sports, Athletics",
+  "theme": "DARK",
+  "archetype": "2 (Performance Pro - Modified for Premium Minimal)",
+  "colors": {
+    "background": "#020617",
+    "surface": "#0F172A",
+    "surface_elevated": "#1E293B",
+    "border": "#1E293B",
+    "text_primary": "#FFFFFF",
+    "text_secondary": "#94A3B8",
+    "accent": "#818CF8",
+    "status": {
+      "done": { "bg": "#064E3B", "text": "#34D399", "border": "#065F46" },
+      "pending": { "bg": "#1E293B", "text": "#94A3B8", "border": "#334155" },
+      "skipped": { "bg": "#4C1D95", "text": "#A78BFA", "border": "#5B21B6" }
+    }
+  },
+  "typography": {
+    "headings": {
+      "family": "'Barlow Condensed', sans-serif",
+      "weights": ["600", "700"],
+      "usage": "Use for numeric data, day titles, main headers. Always apply tracking-tight or tracking-tighter."
+    },
+    "body": {
+      "family": "'DM Sans', sans-serif",
+      "weights": ["400", "500"],
+      "usage": "Use for exercise names, labels, secondary text."
+    }
+  },
+  "spacing_and_layout": {
+    "container": "w-full max-w-md mx-auto px-6 pb-24 pt-8 min-h-screen",
+    "tap_targets": "Minimum 48px height/width for all interactive elements.",
+    "tiles": "p-6 rounded-2xl",
+    "gap": "gap-4 to gap-6 between major sections."
+  },
+  "motion": {
+    "page_transition": "Fade in with subtle upward slide (y: 10 to 0).",
+    "tap_feedback": "Scale down to 0.97 on active/tap. Use framer-motion whileTap={{ scale: 0.97 }}.",
+    "list_stagger": "Stagger list items entrance by 0.05s."
+  },
+  "components": {
+    "ProfileTile": {
+      "style": "bg-slate-900 border border-slate-800 rounded-2xl p-6 flex items-center justify-between hover:bg-slate-800 transition-colors",
+      "typography": "text-2xl font-headings text-white"
+    },
+    "PinPad": {
+      "style": "grid grid-cols-3 gap-6 max-w-xs mx-auto mt-12",
+      "button_style": "w-20 h-20 rounded-full flex items-center justify-center text-3xl font-headings text-white bg-slate-900 border border-slate-800 active:bg-slate-800"
+    },
+    "DayTile": {
+      "style": "bg-slate-900 border border-slate-800 rounded-2xl p-5 mb-4 flex flex-col gap-2 relative overflow-hidden",
+      "title": "text-3xl font-headings text-white uppercase tracking-tight",
+      "subtitle": "text-sm font-body text-slate-400"
+    },
+    "StatusBadge": {
+      "style": "px-3 py-1 rounded-full text-xs font-body uppercase tracking-wider font-semibold border"
+    },
+    "ExerciseCard": {
+      "style": "bg-slate-900 border border-slate-800 rounded-xl p-5 mb-3",
+      "title": "text-lg font-body text-white font-medium",
+      "sets_reps": "text-sm text-slate-400"
+    },
+    "CircuitCard": {
+      "style": "bg-slate-900 border border-indigo-900/50 rounded-xl p-1 mb-3",
+      "inner_container": "bg-slate-950 rounded-lg p-4 border border-slate-800",
+      "header": "text-indigo-400 text-sm font-headings uppercase tracking-widest mb-3"
+    }
+  },
+  "data_model": {
+    "storage_key": "gym_lalu_data",
+    "schema": {
+      "profiles": [
+        { "id": "uuid", "name": "string", "pin": "string" }
+      ],
+      "progress": {
+        "profile_id": {
+          "week_start_date": {
+            "Mon": "done",
+            "Tue": "pending",
+            "Wed": "skipped"
+          }
+        }
+      }
+    }
+  },
+  "hardcoded_database": {
+    "Mon": { "title": "Shoulders", "exercises": 8, "circuit": false },
+    "Tue": { "title": "Chest", "exercises": 8, "circuit": true },
+    "Wed": { "title": "Triceps", "exercises": 8, "circuit": false },
+    "Thu": { "title": "Legs", "exercises": 8, "circuit": false },
+    "Fri": { "title": "Back", "exercises": 8, "circuit": false },
+    "Sat": { "title": "Biceps", "exercises": 8, "circuit": true },
+    "Sun": { "title": "Rest", "exercises": 0, "circuit": false }
+  },
+  "icons": {
+    "library": "lucide-react",
+    "usage": "Use subtle icons (strokeWidth 1.5). Key icons: User, Lock, CheckCircle2, Circle, XCircle, Plus, ChevronLeft, Dumbbell."
+  },
+  "accessibility_and_testing": {
+    "test_ids": "All interactive elements MUST have data-testid attributes (e.g., data-testid='profile-select-button').",
+    "contrast": "Text contrast passes APCA/WCAG standards on dark backgrounds."
+  },
+  "instructions_to_main_agent": [
+    "Initialize React PWA configuration (manifest.json, service worker).",
+    "Setup Tailwind config with Slate colors and Barlow Condensed + DM Sans fonts.",
+    "Implement LocalStorage/IndexedDB state management for profiles and weekly progress.",
+    "Week progress resets dynamically based on current real-world Monday.",
+    "Build views: Profile Selection, Add Profile, PIN Pad, Week Dashboard, Day Details (placeholder list).",
+    "Use framer-motion for smooth transition between PIN Pad and Dashboard.",
+    "Ensure touch targets are 48px+ for mobile usage.",
+    "DO NOT implement backend logic; pure offline execution."
+  ]
+}
