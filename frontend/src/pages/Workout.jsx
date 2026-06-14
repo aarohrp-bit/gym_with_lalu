@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, RotateCw, ArrowRight, Zap, Play, Lock } from "lucide-react";
+import { ChevronLeft, RotateCw, ArrowRight, ArrowUp, Zap, Play, Lock } from "lucide-react";
 import { DAY_META, EXERCISES } from "@/data/exercises";
 import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds } from "@/lib/storage";
 import { mondayKey } from "@/lib/week";
@@ -29,6 +29,9 @@ export default function Workout() {
   const [flipped, setFlipped] = useState(false);
   const [completingId, setCompletingId] = useState(null);
   const [circuitOpen, setCircuitOpen] = useState(false);
+  // Which remaining card is shown on top. Swipe-up advances this; it NEVER
+  // removes a card. Only swipe-right (A) or circuit Finish (B) removes cards.
+  const [viewIdx, setViewIdx] = useState(0);
   const lastTap = useRef(0);
 
   // Eligible cards: ALL types (A + B), not yet completed
@@ -46,6 +49,11 @@ export default function Workout() {
     () => allCards.filter((e) => !completedIds.has(e.id)),
     [allCards, completedIds]
   );
+
+  // Safe index into `remaining` so we never read out of bounds after a card
+  // is completed and the array shrinks.
+  const safeIdx = remaining.length ? viewIdx % remaining.length : 0;
+  const top = remaining.length ? remaining[safeIdx] : undefined;
 
   // ── Five-minute guard ───────────────────────────────────────────
   const guardSeconds = useMemo(() => getGuardSeconds(), []);
@@ -76,8 +84,6 @@ export default function Workout() {
 
   if (!meta || meta.rest || !pid) return null;
 
-  const top = remaining[0];
-
   const handleTap = () => {
     if (!top || completingId || top.type === "B") return;
     const now = Date.now();
@@ -87,6 +93,14 @@ export default function Workout() {
     } else {
       lastTap.current = now;
     }
+  };
+
+  // Swipe-up = skip: show a different not-yet-completed card. Cycles forever,
+  // never completes, never removes anything from the stack.
+  const skipUp = () => {
+    if (!top || completingId || remaining.length <= 1) return;
+    setViewIdx((v) => (v + 1) % remaining.length);
+    setFlipped(false);
   };
 
   const completeTop = () => {
@@ -101,13 +115,21 @@ export default function Workout() {
       });
       setPoints((p) => p + 1);
       setFlipped(false);
+      setViewIdx(0); // reset to the new least-done card
       setCompletingId(null);
     }, 320);
   };
 
   const onDragEnd = (_, info) => {
-    if (top?.type === "B" || guardActive) return;
-    if (info.offset.x > 110 && info.velocity.x > -100) {
+    if (top?.type === "B" || completingId) return;
+    const { x, y } = info.offset;
+    // Vertical swipe up dominates → skip (never blocked by the guard).
+    if (y < -80 && Math.abs(y) > Math.abs(x)) {
+      skipUp();
+      return;
+    }
+    // Horizontal swipe right → complete (guarded).
+    if (!guardActive && x > 110 && info.velocity.x > -100) {
       completeTop();
     }
   };
@@ -121,6 +143,7 @@ export default function Workout() {
       return next;
     });
     setPoints((p) => p + 1);
+    setViewIdx(0);
     setCircuitOpen(false);
   };
 
@@ -129,7 +152,10 @@ export default function Workout() {
   };
 
   const dayDone = points >= POINTS_TARGET;
-  const next2 = remaining.slice(1, 3); // peek behind cards
+  // Peek cards = the next remaining cards after the current one (wrapping).
+  const next2 = remaining.length > 1
+    ? [1, 2].map((k) => remaining[(safeIdx + k) % remaining.length]).filter(Boolean)
+    : [];
 
   return (
     <div className="w-full max-w-md mx-auto px-6 pt-6 pb-10 min-h-screen flex flex-col">
@@ -206,15 +232,15 @@ export default function Workout() {
             <motion.div
               key={top.id}
               data-testid={`workout-card-${top.id}`}
-              drag={!completingId && top.type === "A" ? "x" : false}
-              dragConstraints={{ left: -30, right: 400 }}
+              drag={!completingId && top.type === "A" ? true : false}
+              dragConstraints={{ left: -30, right: 400, top: -400, bottom: 30 }}
               dragElastic={0.25}
               onDragEnd={onDragEnd}
               onTap={handleTap}
               animate={
                 completingId === top.id
                   ? { x: 500, opacity: 0, rotate: 8 }
-                  : { x: 0, opacity: 1, rotate: 0 }
+                  : { x: 0, y: 0, opacity: 1, rotate: 0 }
               }
               transition={{ type: "spring", stiffness: 260, damping: 28 }}
               className={`relative w-full aspect-[3/4] rounded-3xl ${top.type === "A" ? "cursor-grab active:cursor-grabbing touch-none" : ""}`}
@@ -281,7 +307,7 @@ export default function Workout() {
                       {top.name}
                     </h2>
                     <p className="text-slate-500 text-xs font-body mt-2 uppercase tracking-wider">
-                      Double-tap to flip · Swipe right to complete
+                      Double-tap to flip · Swipe right to complete · Swipe up to skip
                     </p>
                   </div>
 
@@ -325,30 +351,46 @@ export default function Workout() {
         )}
       </div>
 
-      {/* Swipe hint */}
+      {/* Swipe hints */}
       {!dayDone && top && top.type === "A" && (
-        <div className="flex items-center justify-center gap-2 text-slate-500 text-xs font-body mt-4">
-          <span>Swipe</span>
-          <motion.span
-            animate={{ x: [0, 8, 0] }}
-            transition={{ duration: 1.2, repeat: Infinity }}
-          >
-            <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
-          </motion.span>
-          <span>to mark complete</span>
+        <div className="flex items-center justify-center gap-5 text-slate-500 text-xs font-body mt-4">
+          <div className="flex items-center gap-1.5">
+            <motion.span animate={{ x: [0, 8, 0] }} transition={{ duration: 1.2, repeat: Infinity }}>
+              <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
+            </motion.span>
+            <span>complete</span>
+          </div>
+          {remaining.length > 1 && (
+            <div className="flex items-center gap-1.5">
+              <motion.span animate={{ y: [0, -6, 0] }} transition={{ duration: 1.2, repeat: Infinity }}>
+                <ArrowUp className="w-4 h-4" strokeWidth={1.5} />
+              </motion.span>
+              <span>skip</span>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Hidden complete button for accessibility / testing fallback (A cards only) */}
+      {/* Hidden buttons for accessibility / testing fallback (A cards only) */}
       {!dayDone && top && top.type === "A" && (
-        <button
-          data-testid="complete-top-card"
-          onClick={completeTop}
-          className="sr-only"
-          aria-label="Mark current card complete"
-        >
-          Complete
-        </button>
+        <>
+          <button
+            data-testid="complete-top-card"
+            onClick={completeTop}
+            className="sr-only"
+            aria-label="Mark current card complete"
+          >
+            Complete
+          </button>
+          <button
+            data-testid="skip-top-card"
+            onClick={skipUp}
+            className="sr-only"
+            aria-label="Skip to another card"
+          >
+            Skip
+          </button>
+        </>
       )}
 
       {/* Circuit runner overlay (locks the rest of the app) */}
