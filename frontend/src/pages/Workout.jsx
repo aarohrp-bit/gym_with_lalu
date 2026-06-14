@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, RotateCw, ArrowRight } from "lucide-react";
+import { ChevronLeft, RotateCw, ArrowRight, Zap, Play } from "lucide-react";
 import { DAY_META, EXERCISES } from "@/data/exercises";
 import { getActive, getWorkout, addCompletion, POINTS_TARGET } from "@/lib/storage";
 import { mondayKey } from "@/lib/week";
+import CircuitRunner from "@/components/CircuitRunner";
 
 export default function Workout() {
   const { day } = useParams();
@@ -27,16 +28,17 @@ export default function Workout() {
   });
   const [flipped, setFlipped] = useState(false);
   const [completingId, setCompletingId] = useState(null);
+  const [circuitOpen, setCircuitOpen] = useState(false);
   const lastTap = useRef(0);
 
-  // Eligible cards: type A only, not yet completed
-  const aCards = useMemo(
-    () => (EXERCISES[dayNum] || []).filter((e) => e.type === "A"),
+  // Eligible cards: ALL types (A + B), not yet completed
+  const allCards = useMemo(
+    () => (EXERCISES[dayNum] || []),
     [dayNum]
   );
   const remaining = useMemo(
-    () => aCards.filter((e) => !completedIds.has(e.id)),
-    [aCards, completedIds]
+    () => allCards.filter((e) => !completedIds.has(e.id)),
+    [allCards, completedIds]
   );
 
   useEffect(() => {
@@ -57,7 +59,7 @@ export default function Workout() {
   const top = remaining[0];
 
   const handleTap = () => {
-    if (!top || completingId) return;
+    if (!top || completingId || top.type === "B") return;
     const now = Date.now();
     if (now - lastTap.current < 300) {
       setFlipped((f) => !f);
@@ -68,7 +70,7 @@ export default function Workout() {
   };
 
   const completeTop = () => {
-    if (!top || completingId) return;
+    if (!top || completingId || top.type === "B") return;
     setCompletingId(top.id);
     addCompletion(pid, weekStart, dayNum, top.id, top.name);
     setTimeout(() => {
@@ -84,9 +86,26 @@ export default function Workout() {
   };
 
   const onDragEnd = (_, info) => {
+    if (top?.type === "B") return;
     if (info.offset.x > 110 && info.velocity.x > -100) {
       completeTop();
     }
+  };
+
+  const onCircuitFinish = () => {
+    if (!top || top.type !== "B") return;
+    addCompletion(pid, weekStart, dayNum, top.id, top.name);
+    setCompletedIds((s) => {
+      const next = new Set(s);
+      next.add(top.id);
+      return next;
+    });
+    setPoints((p) => p + 1);
+    setCircuitOpen(false);
+  };
+
+  const onCircuitAbort = () => {
+    setCircuitOpen(false);
   };
 
   const dayDone = points >= POINTS_TARGET;
@@ -151,7 +170,7 @@ export default function Workout() {
             <motion.div
               key={top.id}
               data-testid={`workout-card-${top.id}`}
-              drag={!completingId ? "x" : false}
+              drag={!completingId && top.type === "A" ? "x" : false}
               dragConstraints={{ left: -30, right: 400 }}
               dragElastic={0.25}
               onDragEnd={onDragEnd}
@@ -162,67 +181,101 @@ export default function Workout() {
                   : { x: 0, opacity: 1, rotate: 0 }
               }
               transition={{ type: "spring", stiffness: 260, damping: 28 }}
-              className="relative w-full aspect-[3/4] rounded-3xl cursor-grab active:cursor-grabbing touch-none"
+              className={`relative w-full aspect-[3/4] rounded-3xl ${top.type === "A" ? "cursor-grab active:cursor-grabbing touch-none" : ""}`}
               style={{ transformStyle: "preserve-3d" }}
             >
-              {/* Front face */}
-              <motion.div
-                animate={{ rotateY: flipped ? 180 : 0 }}
-                transition={{ duration: 0.5 }}
-                className="absolute inset-0 rounded-3xl"
-                style={{ transformStyle: "preserve-3d" }}
-              >
+              {top.type === "B" ? (
+                /* ── Type B circuit card ── */
                 <div
-                  className="absolute inset-0 rounded-3xl bg-slate-900 border border-slate-800 p-6 flex flex-col"
-                  style={{ backfaceVisibility: "hidden" }}
-                  data-testid="card-front"
+                  className="absolute inset-0 rounded-3xl bg-indigo-500/5 border border-indigo-500/40 p-6 flex flex-col"
+                  data-testid="circuit-card"
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500 font-body">Exercise</p>
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500 font-body">
-                      {points + 1} of stack
-                    </p>
+                  <div className="flex items-center gap-2 mb-3">
+                    <Zap className="w-4 h-4 text-indigo-300" strokeWidth={1.75} />
+                    <p className="text-[10px] uppercase tracking-[0.22em] text-indigo-300 font-body font-semibold">Circuit</p>
                   </div>
-                  {/* Placeholder image area */}
-                  <div className="flex-1 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center p-6 mb-5">
-                    <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center">
-                      {top.name}
-                    </p>
-                  </div>
-                  <h2 className="font-display text-3xl text-white font-bold tracking-tight leading-tight" data-testid="card-name">
-                    {top.name}
+                  <h2 className="font-display text-3xl text-white font-bold tracking-tight leading-tight mb-1" data-testid="circuit-card-name">
+                    {top.circuit?.name || top.name}
                   </h2>
-                  <p className="text-slate-500 text-xs font-body mt-2 uppercase tracking-wider">
-                    Double-tap to flip · Swipe right to complete
-                  </p>
+                  <p className="text-slate-400 text-xs font-body mb-4">12-minute timed sub-stack · {top.circuit?.miniExercises?.length || 6} exercises</p>
+                  <div className="flex-1 overflow-hidden">
+                    <div className="flex flex-col gap-1.5" data-testid="circuit-mini-list">
+                      {(top.circuit?.miniExercises || []).map((m, i) => (
+                        <div key={m} className="flex items-center gap-2 text-sm font-body text-slate-200 bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2">
+                          <span className="font-display text-indigo-400 text-xs w-5 text-center">{i + 1}</span>
+                          <span className="truncate">{m}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <button
+                    data-testid="circuit-start-button"
+                    onClick={() => setCircuitOpen(true)}
+                    className="w-full mt-4 bg-indigo-400 text-slate-950 rounded-2xl py-3.5 font-body font-semibold flex items-center justify-center gap-2 min-h-[52px] active:bg-indigo-300"
+                  >
+                    <Play className="w-4 h-4 fill-current" strokeWidth={2} />
+                    Start
+                  </button>
                 </div>
-
-                {/* Back face */}
-                <div
-                  className="absolute inset-0 rounded-3xl bg-indigo-500/5 border border-indigo-500/40 p-6 flex flex-col overflow-hidden"
-                  style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
-                  data-testid="card-back"
+              ) : (
+                <motion.div
+                  animate={{ rotateY: flipped ? 180 : 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="absolute inset-0 rounded-3xl"
+                  style={{ transformStyle: "preserve-3d" }}
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <p className="text-[10px] uppercase tracking-[0.22em] text-indigo-300/70 font-body">Coaching</p>
-                    <RotateCw className="w-3.5 h-3.5 text-indigo-300/60" strokeWidth={1.5} />
+                  {/* Front face */}
+                  <div
+                    className="absolute inset-0 rounded-3xl bg-slate-900 border border-slate-800 p-6 flex flex-col"
+                    style={{ backfaceVisibility: "hidden" }}
+                    data-testid="card-front"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500 font-body">Exercise</p>
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500 font-body">
+                        {points + 1} of stack
+                      </p>
+                    </div>
+                    <div className="flex-1 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center p-6 mb-5">
+                      <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center">
+                        {top.name}
+                      </p>
+                    </div>
+                    <h2 className="font-display text-3xl text-white font-bold tracking-tight leading-tight" data-testid="card-name">
+                      {top.name}
+                    </h2>
+                    <p className="text-slate-500 text-xs font-body mt-2 uppercase tracking-wider">
+                      Double-tap to flip · Swipe right to complete
+                    </p>
                   </div>
-                  <h3 className="font-display text-2xl text-white font-bold tracking-tight leading-tight mb-5">
-                    {top.name}
-                  </h3>
-                  <div className="mb-5">
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-300/80 font-body mb-2">How to perform</p>
-                    <p className="font-body text-slate-200 text-sm leading-relaxed">{top.howTo}</p>
+
+                  {/* Back face */}
+                  <div
+                    className="absolute inset-0 rounded-3xl bg-indigo-500/5 border border-indigo-500/40 p-6 flex flex-col overflow-hidden"
+                    style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
+                    data-testid="card-back"
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <p className="text-[10px] uppercase tracking-[0.22em] text-indigo-300/70 font-body">Coaching</p>
+                      <RotateCw className="w-3.5 h-3.5 text-indigo-300/60" strokeWidth={1.5} />
+                    </div>
+                    <h3 className="font-display text-2xl text-white font-bold tracking-tight leading-tight mb-5">
+                      {top.name}
+                    </h3>
+                    <div className="mb-5">
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-300/80 font-body mb-2">How to perform</p>
+                      <p className="font-body text-slate-200 text-sm leading-relaxed">{top.howTo}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-300/80 font-body mb-2">What it does</p>
+                      <p className="font-body text-slate-300 text-sm leading-relaxed">{top.whatItDoes}</p>
+                    </div>
+                    <p className="text-slate-500 text-xs font-body mt-auto uppercase tracking-wider">
+                      Double-tap to flip back
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-300/80 font-body mb-2">What it does</p>
-                    <p className="font-body text-slate-300 text-sm leading-relaxed">{top.whatItDoes}</p>
-                  </div>
-                  <p className="text-slate-500 text-xs font-body mt-auto uppercase tracking-wider">
-                    Double-tap to flip back
-                  </p>
-                </div>
-              </motion.div>
+                </motion.div>
+              )}
             </motion.div>
           </div>
         ) : !dayDone && !top ? (
@@ -237,7 +290,7 @@ export default function Workout() {
       </div>
 
       {/* Swipe hint */}
-      {!dayDone && top && (
+      {!dayDone && top && top.type === "A" && (
         <div className="flex items-center justify-center gap-2 text-slate-500 text-xs font-body mt-4">
           <span>Swipe</span>
           <motion.span
@@ -250,8 +303,8 @@ export default function Workout() {
         </div>
       )}
 
-      {/* Hidden complete button for accessibility / testing fallback */}
-      {!dayDone && top && (
+      {/* Hidden complete button for accessibility / testing fallback (A cards only) */}
+      {!dayDone && top && top.type === "A" && (
         <button
           data-testid="complete-top-card"
           onClick={completeTop}
@@ -260,6 +313,15 @@ export default function Workout() {
         >
           Complete
         </button>
+      )}
+
+      {/* Circuit runner overlay (locks the rest of the app) */}
+      {circuitOpen && top?.type === "B" && top.circuit && (
+        <CircuitRunner
+          circuit={top.circuit}
+          onAbort={onCircuitAbort}
+          onFinish={onCircuitFinish}
+        />
       )}
     </div>
   );

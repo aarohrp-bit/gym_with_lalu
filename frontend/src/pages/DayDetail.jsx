@@ -19,7 +19,7 @@ export default function DayDetail() {
   const pid = active ? (active.isGuest ? "guest" : active.profileId) : null;
   const workout = pid ? getWorkout(pid, weekStart, dayNum) : null;
   const exercises = EXERCISES[dayNum] || [];
-  const aCount = exercises.filter((e) => e.type === "A").length;
+  const aCount = exercises.length;
   const completedCount = workout?.completions?.length || 0;
   const status = workout?.dayCompleted ? "done" : "pending";
 
