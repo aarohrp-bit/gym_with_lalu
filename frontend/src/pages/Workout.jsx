@@ -104,24 +104,25 @@ export default function Workout() {
     }
   };
 
-  const completeTop = () => {
+  const completeTop = (exitDir) => {
     if (!top || completingId || top.type === "B" || guardActive) return;
+    setExit(exitDir || { x: 560, y: 0 });
     setCompletingId(top.id);
     addCompletion(pid, weekStart, dayNum, top.id, top.name);
-    setTimeout(() => {
-      setCompletedIds((s) => {
-        const next = new Set(s);
-        next.add(top.id);
-        return next;
-      });
-      setPoints((p) => p + 1);
-      setFlipped(false);
-      setCompletingId(null);
-    }, 320);
+    setPoints((p) => p + 1);
+    setFlipped(false);
+    // Removing the card from `remaining` triggers the AnimatePresence exit animation.
+    setCompletedIds((s) => {
+      const next = new Set(s);
+      next.add(top.id);
+      return next;
+    });
+    setTimeout(() => setCompletingId(null), 360);
   };
 
   // Swipe gestures (A cards). Right OR up = complete; down = flip to coaching.
   // Forgiving: either a distance past the threshold or a quick fling triggers it.
+  // (No match → dragSnapToOrigin springs the card back to center.)
   const SWIPE_DIST = 80;
   const FLING_VEL = 550;
   const onDragEnd = (_, info) => {
@@ -130,15 +131,9 @@ export default function Workout() {
     const right = offset.x > SWIPE_DIST || velocity.x > FLING_VEL;
     const up = offset.y < -SWIPE_DIST || velocity.y < -FLING_VEL;
     const down = offset.y > SWIPE_DIST || velocity.y > FLING_VEL;
-    if (right) {
-      setExit({ x: 560, y: 0 });
-      completeTop();
-    } else if (up) {
-      setExit({ x: 0, y: -760 });
-      completeTop();
-    } else if (down) {
-      setFlipped((f) => !f);
-    }
+    if (right) completeTop({ x: 560, y: 0 });
+    else if (up) completeTop({ x: 0, y: -760 });
+    else if (down) setFlipped((f) => !f);
   };
 
   const onCircuitFinish = () => {
@@ -216,7 +211,7 @@ export default function Workout() {
       {/* Card stack */}
       <div className="flex-1 flex items-center justify-center relative" style={{ perspective: 1200 }}>
         {!dayDone && top ? (
-          <div className="relative w-full" data-testid="card-stack">
+          <div className="relative w-full aspect-[3/4]" data-testid="card-stack">
             {/* Back peek cards */}
             {next2.map((c, i) => (
               <div
@@ -232,21 +227,30 @@ export default function Workout() {
             ))}
 
             {/* Top draggable card */}
+            <AnimatePresence custom={exit} initial={false}>
             <motion.div
               key={top.id}
+              custom={exit}
               data-testid={`workout-card-${top.id}`}
               drag={!completingId && top.type === "A" ? true : false}
-              dragConstraints={{ left: -60, right: 400, top: -400, bottom: 60 }}
-              dragElastic={0.4}
+              dragSnapToOrigin
+              dragElastic={0.5}
               onDragEnd={onDragEnd}
               onTap={handleTap}
-              animate={
-                completingId === top.id
-                  ? { x: exit.x, y: exit.y, opacity: 0, rotate: exit.x ? 8 : 0 }
-                  : { x: 0, y: 0, opacity: 1, rotate: 0 }
-              }
-              transition={{ type: "spring", stiffness: 260, damping: 28 }}
-              className={`relative w-full aspect-[3/4] rounded-3xl ${top.type === "A" ? "cursor-grab active:cursor-grabbing touch-none" : ""}`}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              variants={{
+                exit: (e) => ({
+                  x: e?.x ?? 560,
+                  y: e?.y ?? 0,
+                  opacity: 0,
+                  rotate: e?.x ? 10 : 0,
+                  transition: { duration: 0.32 },
+                }),
+              }}
+              exit="exit"
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              className={`absolute inset-0 rounded-3xl ${top.type === "A" ? "cursor-grab active:cursor-grabbing touch-none" : ""}`}
               style={{ transformStyle: "preserve-3d" }}
             >
               {top.type === "B" ? (
@@ -355,6 +359,7 @@ export default function Workout() {
                 </motion.div>
               )}
             </motion.div>
+            </AnimatePresence>
           </div>
         ) : !dayDone && !top ? (
           <div className="text-center text-slate-400 font-body">
@@ -392,7 +397,7 @@ export default function Workout() {
       {!dayDone && top && top.type === "A" && (
         <button
           data-testid="complete-top-card"
-          onClick={completeTop}
+          onClick={() => completeTop({ x: 560, y: 0 })}
           className="sr-only"
           aria-label="Mark current card complete"
         >
