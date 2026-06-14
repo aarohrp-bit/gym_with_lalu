@@ -21,11 +21,31 @@
         <div id="root"></div>
         <script>
           if ("serviceWorker" in navigator) {
-            window.addEventListener("load", function () {
-              navigator.serviceWorker.register("/service-worker.js").catch(function (err) {
-                console.warn("SW registration failed:", err);
+            var host = location.hostname;
+            var isLocalDev = host === "localhost" || host === "127.0.0.1";
+            if (isLocalDev) {
+              // In development, never let a service worker cache-trap stale code.
+              navigator.serviceWorker.getRegistrations().then(function (rs) {
+                rs.forEach(function (r) { r.unregister(); });
               });
-            });
+              if (window.caches && caches.keys) {
+                caches.keys().then(function (ks) { ks.forEach(function (k) { caches.delete(k); }); });
+              }
+            } else {
+              window.addEventListener("load", function () {
+                navigator.serviceWorker.register("/service-worker.js").then(function (reg) {
+                  // Reload once when a new version takes control, so users get fresh code.
+                  var refreshing = false;
+                  navigator.serviceWorker.addEventListener("controllerchange", function () {
+                    if (refreshing) return;
+                    refreshing = true;
+                    window.location.reload();
+                  });
+                }).catch(function (err) {
+                  console.warn("SW registration failed:", err);
+                });
+              });
+            }
           }
         </script>
     </body>
