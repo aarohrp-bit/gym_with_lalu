@@ -29,6 +29,7 @@ export default function Workout() {
   const [flipped, setFlipped] = useState(false);
   const [completingId, setCompletingId] = useState(null);
   const [circuitOpen, setCircuitOpen] = useState(false);
+  const [viewIdx, setViewIdx] = useState(0);
   const lastTap = useRef(0);
 
   // Eligible cards: ALL types (A + B), not yet completed
@@ -76,7 +77,13 @@ export default function Workout() {
 
   if (!meta || meta.rest || !pid) return null;
 
-  const top = remaining[0];
+  const top = remaining.length > 0 ? remaining[viewIdx % remaining.length] : null;
+
+  const skipUp = () => {
+    if (remaining.length <= 1) return;
+    setViewIdx((v) => (v + 1) % remaining.length);
+    setFlipped(false);
+  };
 
   const handleTap = () => {
     if (!top || completingId || top.type === "B") return;
@@ -106,8 +113,17 @@ export default function Workout() {
   };
 
   const onDragEnd = (_, info) => {
+    if (completingId) return;
+    const ax = info.offset.x;
+    const ay = info.offset.y;
+    // Swipe-up = skip (works for both A and B cards; never completes)
+    if (Math.abs(ay) > Math.abs(ax) && ay < -80) {
+      skipUp();
+      return;
+    }
+    // Swipe-right = complete (A only, and not during guard)
     if (top?.type === "B" || guardActive) return;
-    if (info.offset.x > 110 && info.velocity.x > -100) {
+    if (ax > 110 && info.velocity.x > -100) {
       completeTop();
     }
   };
@@ -206,15 +222,15 @@ export default function Workout() {
             <motion.div
               key={top.id}
               data-testid={`workout-card-${top.id}`}
-              drag={!completingId && top.type === "A" ? "x" : false}
-              dragConstraints={{ left: -30, right: 400 }}
+              drag={!completingId ? true : false}
+              dragConstraints={{ left: -30, right: 400, top: -300, bottom: 30 }}
               dragElastic={0.25}
               onDragEnd={onDragEnd}
               onTap={handleTap}
               animate={
                 completingId === top.id
                   ? { x: 500, opacity: 0, rotate: 8 }
-                  : { x: 0, opacity: 1, rotate: 0 }
+                  : { x: 0, y: 0, opacity: 1, rotate: 0 }
               }
               transition={{ type: "spring", stiffness: 260, damping: 28 }}
               className={`relative w-full aspect-[9/19] rounded-3xl ${top.type === "A" ? "cursor-grab active:cursor-grabbing touch-none" : ""}`}
@@ -284,8 +300,8 @@ export default function Workout() {
                     <h2 className="font-display text-3xl text-white font-bold tracking-tight leading-tight" data-testid="card-name">
                       {top.name}
                     </h2>
-                    <p className="text-slate-500 text-xs font-body mt-2 uppercase tracking-wider">
-                      Double-tap to flip · Swipe right to complete
+                    <p className="text-slate-500 text-xs font-body mt-2 uppercase tracking-wider" data-testid="card-hint">
+                      Swipe up to skip · Swipe right to complete
                     </p>
                   </div>
 
@@ -330,20 +346,15 @@ export default function Workout() {
       </div>
 
       {/* Swipe hint */}
-      {!dayDone && top && top.type === "A" && (
+      {!dayDone && top && (
         <div className="flex items-center justify-center gap-2 text-slate-500 text-xs font-body mt-4">
-          <span>Swipe</span>
-          <motion.span
-            animate={{ x: [0, 8, 0] }}
-            transition={{ duration: 1.2, repeat: Infinity }}
-          >
-            <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
-          </motion.span>
-          <span>to mark complete</span>
+          <span>{top.type === "A" ? "Swipe right to complete" : "Tap Start to begin"}</span>
+          <span className="text-slate-700">·</span>
+          <span>Swipe up to skip</span>
         </div>
       )}
 
-      {/* Hidden complete button for accessibility / testing fallback (A cards only) */}
+      {/* Hidden fallbacks for accessibility / testing */}
       {!dayDone && top && top.type === "A" && (
         <button
           data-testid="complete-top-card"
@@ -352,6 +363,16 @@ export default function Workout() {
           aria-label="Mark current card complete"
         >
           Complete
+        </button>
+      )}
+      {!dayDone && top && remaining.length > 1 && (
+        <button
+          data-testid="skip-top-card"
+          onClick={skipUp}
+          className="sr-only"
+          aria-label="Skip to next remaining card"
+        >
+          Skip
         </button>
       )}
 
