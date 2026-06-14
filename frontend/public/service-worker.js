@@ -1,5 +1,6 @@
-/* Gym with Lalu — App Shell Service Worker */
-const CACHE_NAME = "gym-with-lalu-v1";
+/* Gym with Lalu — App Shell + Image Service Worker */
+const CACHE_NAME = "gym-with-lalu-v2";
+
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -7,9 +8,35 @@ const APP_SHELL = [
   "/dumbbell.svg"
 ];
 
+// All exercise/mini-exercise images (precached so the whole app works offline
+// after a single online visit — even images you haven't viewed yet).
+const IMAGE_KEYS = [
+  "9fyk93","9iuckc","404cvl","a6wp6i","v97wkz","vsiqo2","buv80r","tmw1sa",
+  "5on1f5","9pkptv","84o2ln","jb9rjh","qg7j95","ywwdk0","ohl056",
+  "4so763","8i68io","c38ld4","ooynug","r01yrl","yzsm4o","f1oxlu","ar7ouu",
+  "7zxxhr","8wi16v","667orr","776lsc","dt1er2","dymt99","gt869g","mc6wa9",
+  "c8pe80","kbbgn1","l7cfjs","nii3de","qwroa8","ttyp6k","maiyp4","qtit34",
+  "3a60p3","56it57","854lqt","i1ugm6","i1uxdd","ke1x4g","n6ecfw",
+  "9y024a","af051o","knipph","lh8t4i","wv5sk7","z6n3ow",
+  "2pvxjw","5tbvis","iv79uj","xji55x","ogoyiy","g1qhqp"
+];
+const IMAGE_URLS = IMAGE_KEYS.map((k) => `/exercises/${k}.webp`);
+
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME).then(async (cache) => {
+      // App shell must succeed.
+      await cache.addAll(APP_SHELL);
+      // Images are best-effort — a single 404 must not abort the install.
+      await Promise.allSettled(
+        IMAGE_URLS.map((url) =>
+          fetch(url, { cache: "reload" })
+            .then((res) => (res && res.ok ? cache.put(url, res) : null))
+            .catch(() => null)
+        )
+      );
+      await self.skipWaiting();
+    })
   );
 });
 
@@ -25,7 +52,7 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  // Don't cache cross-origin (fonts CDN handled by browser cache) or API calls
+  // Don't intercept cross-origin (e.g. fonts CDN — handled by the browser cache).
   if (url.origin !== self.location.origin) return;
 
   event.respondWith(
@@ -39,6 +66,7 @@ self.addEventListener("fetch", (event) => {
           return res;
         })
         .catch(() => cached || caches.match("/index.html"));
+      // Cache-first for speed/offline; fall back to network.
       return cached || network;
     })
   );

@@ -64,6 +64,28 @@ Build a Progressive Web App (PWA) called "Gym with Lalu" — a personal 6-day gy
 - Fonts: Barlow Condensed (display) + DM Sans (body).
 - Colors: `bg #020617`, `surface #0F172A`, accent `#818CF8`.
 
+## Phase 4 + 5 (DELIVERED 2026-06-14) — project finished
+1. **Weekly generation (`lib/weekgen.js`)** — each weekday is mapped to a muscle category.
+   Non-seed weeks are randomly shuffled with the "no category within 3 days of last week's
+   slot" refresh rule (re-roll until satisfied; verified 0 violations over 200 consecutive weeks).
+2. **Seed system** — deterministic `cyrb128` + `mulberry32` RNG drives a Fisher–Yates shuffle
+   of both the day→category layout and per-category card order. Same seed → identical week on
+   any device (verified). Seeds disable least-done sorting and last exactly one week.
+   Dashboard has an "Enter seed" field, a seed banner with clear, and a "New week" button.
+3. **5-minute guard** and **least-done-first sorting** wired through the week/category resolver.
+4. **Default profile** — star toggle on the Profile Select screen; the default auto-loads on a
+   fresh launch and is skipped after an explicit logout.
+5. **Real images** — all placeholder boxes replaced with the exercise/mini-exercise images
+   (`.webp`, keyed by short id in `data/exercises.js`). The 363 MB `.png` set was removed in
+   favour of a 4 MB `.webp` set.
+6. **Full coaching text** — every A exercise and every circuit mini-exercise now has real
+   "How to perform" + "What it does" text.
+7. **Offline hardening** — the service worker precaches the app shell **and all 58 images** on
+   install, so the whole app works in airplane mode after one online visit.
+8. **Bug fixes** — removed the broken `@emergentbase/visual-edits` private dependency (was a
+   403 build blocker), removed the non-existent PNG icon entries from the manifest, and removed
+   the external Emergent badge/script so the app is fully self-contained and offline-capable.
+
 ## Backlog (Prioritized) — for future phases
 ### P0 (next)
 - [ ] Full coaching text for `howTo` and `whatItDoes` on every exercise (user will paste).

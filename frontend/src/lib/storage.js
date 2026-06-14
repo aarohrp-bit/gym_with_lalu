@@ -2,7 +2,9 @@
 
 const KEY = "gym_lalu_v1";
 
-const empty = () => ({ profiles: [], progress: {}, workouts: {} });
+import { generateWeek } from "@/lib/weekgen";
+
+const empty = () => ({ profiles: [], progress: {}, workouts: {}, counts: {}, lastCompletionAt: {}, weeks: {}, defaultProfileId: null });
 
 // Per-day workout target — day is "done" at exactly this many A-card completions.
 export const POINTS_TARGET = 5;
@@ -29,6 +31,8 @@ export const load = () => {
     parsed.workouts ||= {};
     parsed.counts ||= {};
     parsed.lastCompletionAt ||= {};
+    parsed.weeks ||= {};
+    if (!("defaultProfileId" in parsed)) parsed.defaultProfileId = null;
     return parsed;
   } catch {
     return empty();
@@ -162,6 +166,79 @@ export const getCounts = (profileId) => {
 export const getLastCompletionAt = (profileId) => {
   const data = load();
   return data.lastCompletionAt[profileId] || null;
+};
+
+// ── Weekly layout (category↔weekday mapping + optional seed) ──────────────────
+// weeks[profileId][weekStartIso] = { weekId, seed, dayCategory, cardOrder, prevWeekDayCategory, generatedAt }
+
+// Find the most recent stored week BEFORE weekStartIso for this profile (for the 3-day rule).
+const findPrevDayCategory = (data, profileId, weekStartIso) => {
+  const byWeek = data.weeks[profileId] || {};
+  const earlier = Object.keys(byWeek)
+    .filter((k) => k < weekStartIso)
+    .sort();
+  if (earlier.length === 0) return null;
+  const prev = byWeek[earlier[earlier.length - 1]];
+  return prev?.dayCategory || null;
+};
+
+// Get the week layout, generating a fresh (non-seed) one if none exists yet.
+export const ensureWeek = (profileId, weekStartIso) => {
+  const data = load();
+  data.weeks[profileId] ||= {};
+  if (!data.weeks[profileId][weekStartIso]) {
+    const prevDayCategory = findPrevDayCategory(data, profileId, weekStartIso);
+    data.weeks[profileId][weekStartIso] = generateWeek({
+      seed: null,
+      prevDayCategory,
+      weekStartIso,
+    });
+    save(data);
+  }
+  return data.weeks[profileId][weekStartIso];
+};
+
+export const getWeek = (profileId, weekStartIso) => {
+  const data = load();
+  return data.weeks[profileId]?.[weekStartIso] || null;
+};
+
+// Apply a seed: regenerate THIS week deterministically from the seed string.
+// An empty/blank seed clears the seed and regenerates a normal (non-seed) week.
+export const applySeed = (profileId, weekStartIso, seedString) => {
+  const data = load();
+  data.weeks[profileId] ||= {};
+  const prevDayCategory = findPrevDayCategory(data, profileId, weekStartIso);
+  data.weeks[profileId][weekStartIso] = generateWeek({
+    seed: seedString && String(seedString).trim() ? seedString : null,
+    prevDayCategory,
+    weekStartIso,
+  });
+  // A new layout invalidates this week's in-progress data.
+  if (data.workouts[profileId]) delete data.workouts[profileId][weekStartIso];
+  if (data.progress[profileId]) delete data.progress[profileId][weekStartIso];
+  save(data);
+  return data.weeks[profileId][weekStartIso];
+};
+
+// "Start new week": clear any seed, regenerate a fresh non-seed layout, reset progress.
+export const startNewWeek = (profileId, weekStartIso) =>
+  applySeed(profileId, weekStartIso, null);
+
+// ── Default profile (auto-loads on launch) ────────────────────────────────────
+export const getDefaultProfileId = () => load().defaultProfileId || null;
+
+export const setDefaultProfileId = (profileId) => {
+  const data = load();
+  data.defaultProfileId = profileId || null;
+  save(data);
+};
+
+export const toggleDefaultProfile = (profileId) => {
+  const data = load();
+  data.defaultProfileId = data.defaultProfileId === profileId ? null : profileId;
+  save(data);
+  return data.defaultProfileId;
 };
 
 // Active profile session helpers (sessionStorage so refresh remembers, but new tab = relock)

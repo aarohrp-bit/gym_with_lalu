@@ -2,9 +2,10 @@ import React, { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { CheckCircle2, Clock, Trophy } from "lucide-react";
-import { DAY_META } from "@/data/exercises";
-import { getActive, getWorkout } from "@/lib/storage";
+import { DAY_META, categoryTitle } from "@/data/exercises";
+import { getActive, getWorkout, getWeek } from "@/lib/storage";
 import { mondayKey } from "@/lib/week";
+import { categoryForDay } from "@/lib/weekgen";
 
 const fmtTimeHM = (iso) => {
   const d = new Date(iso);
@@ -34,6 +35,8 @@ export default function Summary() {
   const active = getActive();
   const pid = active ? (active.isGuest ? "guest" : active.profileId) : null;
   const workout = pid ? getWorkout(pid, weekStart, dayNum) : null;
+  const week = pid ? getWeek(pid, weekStart) : null;
+  const title = meta && !meta.rest ? categoryTitle(categoryForDay(week, dayNum)) : (meta?.title || "");
 
   if (!meta || !workout || workout.completions.length === 0) {
     navigate("/dashboard");
@@ -59,7 +62,7 @@ export default function Summary() {
           <div>
             <p className="text-[11px] uppercase tracking-[0.18em] text-emerald-400 font-body">Day complete</p>
             <h1 className="font-display text-4xl font-bold text-white tracking-tight uppercase -mt-0.5">
-              {meta.title}
+              {title}
             </h1>
           </div>
         </div>

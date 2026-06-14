@@ -1,16 +1,31 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Plus, User, UserCircle2, Dumbbell, ChevronRight } from "lucide-react";
-import { load, setActive } from "@/lib/storage";
+import { Plus, User, UserCircle2, Dumbbell, ChevronRight, Star } from "lucide-react";
+import { load, setActive, toggleDefaultProfile } from "@/lib/storage";
 
 export default function ProfileSelect() {
   const navigate = useNavigate();
   const [profiles, setProfiles] = useState([]);
+  const [defaultId, setDefaultId] = useState(null);
 
   useEffect(() => {
-    setProfiles(load().profiles || []);
-  }, []);
+    const data = load();
+    const list = data.profiles || [];
+    const def = data.defaultProfileId || null;
+    setProfiles(list);
+    setDefaultId(def);
+
+    // Auto-advance to the default profile on a fresh launch (soft-lock convenience).
+    // Skips only once per session, so logging out returns here without bouncing back.
+    let visited = false;
+    try { visited = sessionStorage.getItem("gym_lalu_visited") === "1"; } catch { /* ignore */ }
+    try { sessionStorage.setItem("gym_lalu_visited", "1"); } catch { /* ignore */ }
+    if (!visited && def && list.some((p) => p.id === def)) {
+      setActive(def, false);
+      navigate("/dashboard");
+    }
+  }, [navigate]);
 
   const onPickProfile = (p) => navigate(`/pin/${p.id}`);
   const onGuest = () => {
@@ -18,6 +33,10 @@ export default function ProfileSelect() {
     navigate("/dashboard");
   };
   const onAdd = () => navigate("/add-profile");
+  const onToggleDefault = (e, p) => {
+    e.stopPropagation();
+    setDefaultId(toggleDefaultProfile(p.id));
+  };
 
   return (
     <div className="w-full max-w-md mx-auto px-6 pt-12 pb-24 min-h-screen">
@@ -37,31 +56,53 @@ export default function ProfileSelect() {
           </div>
         </div>
         <p className="text-slate-400 text-sm font-body leading-relaxed">
-          Choose a profile to continue, or jump in as a guest.
+          Choose a profile to continue, or jump in as a guest. Tap the star to auto-load a profile next time.
         </p>
       </motion.div>
 
       <div className="flex flex-col gap-3" data-testid="profile-list">
-        {profiles.map((p, idx) => (
-          <motion.button
-            key={p.id}
-            data-testid={`profile-tile-${p.id}`}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 * idx, duration: 0.3 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => onPickProfile(p)}
-            className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between active:bg-slate-800 transition-colors min-h-[72px]"
-          >
-            <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
-                <UserCircle2 className="w-5 h-5 text-slate-300" strokeWidth={1.5} />
+        {profiles.map((p, idx) => {
+          const isDefault = p.id === defaultId;
+          return (
+            <motion.div
+              key={p.id}
+              data-testid={`profile-tile-${p.id}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.05 * idx, duration: 0.3 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => onPickProfile(p)}
+              className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center justify-between active:bg-slate-800 transition-colors min-h-[72px] cursor-pointer"
+            >
+              <div className="flex items-center gap-4 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center flex-shrink-0">
+                  <UserCircle2 className="w-5 h-5 text-slate-300" strokeWidth={1.5} />
+                </div>
+                <div className="min-w-0">
+                  <span className="font-display text-2xl text-white tracking-tight block truncate">{p.name}</span>
+                  {isDefault && (
+                    <span className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-body">Default · auto-loads</span>
+                  )}
+                </div>
               </div>
-              <span className="font-display text-2xl text-white tracking-tight">{p.name}</span>
-            </div>
-            <ChevronRight className="w-5 h-5 text-slate-500" />
-          </motion.button>
-        ))}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button
+                  type="button"
+                  data-testid={`default-toggle-${p.id}`}
+                  onClick={(e) => onToggleDefault(e, p)}
+                  className="w-10 h-10 rounded-full flex items-center justify-center active:bg-slate-800"
+                  aria-label={isDefault ? "Unset default profile" : "Set as default profile"}
+                >
+                  <Star
+                    className={`w-5 h-5 ${isDefault ? "text-amber-300 fill-amber-300" : "text-slate-600"}`}
+                    strokeWidth={1.75}
+                  />
+                </button>
+                <ChevronRight className="w-5 h-5 text-slate-500" />
+              </div>
+            </motion.div>
+          );
+        })}
 
         {profiles.length === 0 && (
           <div className="text-center py-6 text-slate-500 text-sm font-body">No profiles yet. Add one below.</div>

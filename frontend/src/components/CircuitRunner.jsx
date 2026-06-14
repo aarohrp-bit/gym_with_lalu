@@ -125,30 +125,46 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
               className="absolute inset-0 rounded-3xl bg-slate-900 border border-slate-800 p-6 flex flex-col"
               style={{ backfaceVisibility: "hidden" }}
             >
-              <div className="flex-1 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center p-6 mb-4">
-                <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center">
-                  {current}
-                </p>
+              <div className="flex-1 rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden mb-4 relative">
+                {current.img ? (
+                  <img
+                    src={current.img}
+                    alt={current.name}
+                    draggable={false}
+                    data-testid="circuit-mini-image"
+                    className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center p-6">
+                    <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center">{current.name}</p>
+                  </div>
+                )}
               </div>
               <h3 className="font-display text-2xl text-white font-bold tracking-tight leading-tight" data-testid="circuit-mini-name">
-                {current}
+                {current.name}
               </h3>
               <p className="text-slate-500 text-xs font-body mt-2 uppercase tracking-wider">
                 Double-tap to flip · Swipe to move
               </p>
             </div>
             <div
-              className="absolute inset-0 rounded-3xl bg-indigo-500/5 border border-indigo-500/40 p-6 flex flex-col"
+              className="absolute inset-0 rounded-3xl bg-indigo-500/5 border border-indigo-500/40 p-6 flex flex-col overflow-hidden"
               style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
             >
               <div className="flex items-start justify-between mb-4">
-                <p className="text-[10px] uppercase tracking-[0.22em] text-indigo-300/70 font-body">How to perform</p>
+                <p className="text-[10px] uppercase tracking-[0.22em] text-indigo-300/70 font-body">Coaching</p>
                 <RotateCw className="w-3.5 h-3.5 text-indigo-300/60" strokeWidth={1.5} />
               </div>
-              <h3 className="font-display text-2xl text-white font-bold tracking-tight leading-tight mb-4">{current}</h3>
-              <p className="font-body text-slate-200 text-sm leading-relaxed">
-                How to: short placeholder cue for {current}. (Full coaching text comes in a later phase.)
-              </p>
+              <h3 className="font-display text-2xl text-white font-bold tracking-tight leading-tight mb-4">{current.name}</h3>
+              <div className="mb-4">
+                <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-300/80 font-body mb-1.5">How to perform</p>
+                <p className="font-body text-slate-200 text-sm leading-relaxed">{current.howTo}</p>
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-300/80 font-body mb-1.5">What it does</p>
+                <p className="font-body text-slate-300 text-sm leading-relaxed">{current.whatItDoes}</p>
+              </div>
               <p className="text-slate-500 text-xs font-body mt-auto uppercase tracking-wider">Double-tap to flip back</p>
             </div>
           </motion.div>

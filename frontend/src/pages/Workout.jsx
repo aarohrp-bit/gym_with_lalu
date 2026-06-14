@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, RotateCw, ArrowRight, Zap, Play, Lock } from "lucide-react";
-import { DAY_META, EXERCISES } from "@/data/exercises";
-import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds } from "@/lib/storage";
+import { DAY_META, EXERCISES, categoryTitle } from "@/data/exercises";
+import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds, ensureWeek } from "@/lib/storage";
 import { mondayKey } from "@/lib/week";
+import { categoryForDay } from "@/lib/weekgen";
 import CircuitRunner from "@/components/CircuitRunner";
 
 export default function Workout() {
@@ -15,6 +16,9 @@ export default function Workout() {
   const weekStart = useMemo(() => mondayKey(), []);
   const active = getActive();
   const pid = active ? (active.isGuest ? "guest" : active.profileId) : null;
+  const week = useMemo(() => (pid && meta && !meta.rest ? ensureWeek(pid, weekStart) : null), [pid, meta, weekStart]);
+  const catId = categoryForDay(week, dayNum);
+  const title = meta && !meta.rest ? categoryTitle(catId) : (meta?.title || "");
 
   const [completedIds, setCompletedIds] = useState(() => {
     if (!pid) return new Set();
@@ -35,13 +39,23 @@ export default function Workout() {
   // Sorted ascending by lifetime completion count (least-done first); guest = stable default order.
   const counts = useMemo(() => (pid ? getCounts(pid) : {}), [pid]);
   const allCards = useMemo(() => {
-    const base = EXERCISES[dayNum] || [];
+    const base = EXERCISES[catId] || [];
+    // Seeded week → fixed, reproducible order (least-done sorting disabled).
+    if (week?.seed && week.cardOrder?.[catId]) {
+      const order = week.cardOrder[catId];
+      const byId = Object.fromEntries(base.map((e) => [e.id, e]));
+      const ordered = order.map((id) => byId[id]).filter(Boolean);
+      // Append any cards missing from the seed order (safety).
+      base.forEach((e) => { if (!order.includes(e.id)) ordered.push(e); });
+      return ordered;
+    }
     if (!pid || pid === "guest") return base;
+    // Least-done-first.
     return base
       .map((e, i) => ({ e, i, c: counts[e.id] || 0 }))
       .sort((a, b) => a.c - b.c || a.i - b.i)
       .map((x) => x.e);
-  }, [dayNum, pid, counts]);
+  }, [catId, pid, counts, week]);
   const remaining = useMemo(
     () => allCards.filter((e) => !completedIds.has(e.id)),
     [allCards, completedIds]
@@ -145,7 +159,7 @@ export default function Workout() {
         </button>
         <div className="text-right">
           <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-body">{meta.label} · Day {meta.day}</p>
-          <p className="font-display text-xl text-white uppercase tracking-tight -mt-0.5">{meta.title}</p>
+          <p className="font-display text-xl text-white uppercase tracking-tight -mt-0.5">{title}</p>
         </div>
       </div>
 
@@ -237,9 +251,9 @@ export default function Workout() {
                   <div className="flex-1 overflow-hidden">
                     <div className="flex flex-col gap-1.5" data-testid="circuit-mini-list">
                       {(top.circuit?.miniExercises || []).map((m, i) => (
-                        <div key={m} className="flex items-center gap-2 text-sm font-body text-slate-200 bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2">
+                        <div key={m.name} className="flex items-center gap-2 text-sm font-body text-slate-200 bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2">
                           <span className="font-display text-indigo-400 text-xs w-5 text-center">{i + 1}</span>
-                          <span className="truncate">{m}</span>
+                          <span className="truncate">{m.name}</span>
                         </div>
                       ))}
                     </div>
@@ -272,10 +286,23 @@ export default function Workout() {
                         {points + 1} of stack
                       </p>
                     </div>
-                    <div className="flex-1 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center p-6 mb-5">
-                      <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center">
-                        {top.name}
-                      </p>
+                    <div className="flex-1 rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden mb-5 relative">
+                      {top.img ? (
+                        <img
+                          src={top.img}
+                          alt={top.name}
+                          draggable={false}
+                          data-testid="card-image"
+                          className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center p-6">
+                          <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center">
+                            {top.name}
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <h2 className="font-display text-3xl text-white font-bold tracking-tight leading-tight" data-testid="card-name">
                       {top.name}
