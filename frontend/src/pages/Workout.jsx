@@ -6,7 +6,7 @@ import { DAY_META, EXERCISES_BY_CATEGORY } from "@/data/exercises";
 import { imageForExerciseId } from "@/data/exerciseImages";
 import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds, getWeeklyMapping, getActiveSeed } from "@/lib/storage";
 import { deriveSeededCardOrders } from "@/lib/seed";
-import { mondayKey } from "@/lib/week";
+import { mondayKey, todayDayNum } from "@/lib/week";
 import CircuitRunner from "@/components/CircuitRunner";
 
 export default function Workout() {
@@ -14,6 +14,10 @@ export default function Workout() {
   const dayNum = Number(day);
   const navigate = useNavigate();
   const meta = DAY_META.find((d) => d.day === dayNum);
+  const today = todayDayNum();
+  // Only today's training day is reachable. Any other day redirects back to
+  // the dashboard so the locked-day rule cannot be bypassed via URL.
+  const allowedDay = !!meta && !meta.rest && dayNum === today;
   const weekStart = useMemo(() => mondayKey(), []);
   const active = getActive();
   const pid = active ? (active.isGuest ? "guest" : active.profileId) : null;
@@ -90,7 +94,8 @@ export default function Workout() {
   useEffect(() => {
     if (!active) navigate("/");
     else if (!meta || meta.rest) navigate("/dashboard");
-  }, [active, meta, navigate]);
+    else if (!allowedDay) navigate("/dashboard", { replace: true });
+  }, [active, meta, allowedDay, navigate]);
 
   // Auto-route to summary at POINTS_TARGET points
   useEffect(() => {
@@ -100,7 +105,7 @@ export default function Workout() {
     }
   }, [points, dayNum, navigate]);
 
-  if (!meta || meta.rest || !pid) return null;
+  if (!meta || meta.rest || !pid || !allowedDay) return null;
 
   // `top` is the card currently shown. viewIdx allows the user to skip past the
   // natural first-in-stack card via swipe-up to reach (e.g.) the day's circuit card.

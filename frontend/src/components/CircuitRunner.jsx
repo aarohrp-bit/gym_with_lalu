@@ -66,11 +66,13 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950 flex flex-col"
+      className="fixed inset-0 z-50 bg-slate-950 flex justify-center"
       data-testid="circuit-overlay"
       role="dialog"
       aria-modal="true"
     >
+      {/* Phone-width column — matches the rest of the app (max-w-md, centered). */}
+      <div className="relative w-full max-w-md h-full flex flex-col">
       {/* Abort fixed at top */}
       <div className="px-6 pt-6 flex items-center justify-between">
         <button
@@ -81,16 +83,16 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
           <X className="w-4 h-4" strokeWidth={2} />
           Abort
         </button>
-        <div className="text-right">
+        <div className="text-right min-w-0 max-w-[60%]">
           <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500 font-body">Circuit</p>
-          <p className="font-display text-xl text-white uppercase tracking-tight -mt-0.5" data-testid="circuit-name">
+          <p className="font-display text-xl text-white uppercase tracking-tight -mt-0.5 truncate" data-testid="circuit-name">
             {circuit.name}
           </p>
         </div>
       </div>
 
-      {/* Sub-card area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-6">
+      {/* Sub-card area — sized inside the phone column. */}
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 py-4">
         <div className="w-full flex items-center justify-between mb-3">
           <p className="text-[10px] uppercase tracking-[0.22em] text-indigo-300/70 font-body" data-testid="circuit-card-index">
             {idx + 1} of {mini.length}
@@ -112,7 +114,7 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.25 }}
-          className="w-full aspect-[3/4] rounded-3xl touch-none cursor-grab active:cursor-grabbing"
+          className="w-full max-h-full aspect-[3/4] rounded-3xl touch-none cursor-grab active:cursor-grabbing"
           style={{ transformStyle: "preserve-3d" }}
           data-testid={`circuit-sub-card-${idx}`}
         >
@@ -246,6 +248,7 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }

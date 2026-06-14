@@ -1,11 +1,11 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronLeft, Play, CheckCircle2, Sparkles } from "lucide-react";
 import { DAY_META, EXERCISES_BY_CATEGORY } from "@/data/exercises";
 import { CATEGORY_BLURBS } from "@/data/categoryBlurbs";
 import { getActive, getWorkout, resetWorkout, getWeeklyMapping } from "@/lib/storage";
-import { mondayKey } from "@/lib/week";
+import { mondayKey, todayDayNum } from "@/lib/week";
 import StatusBadge from "@/components/StatusBadge";
 
 export default function DayDetail() {
@@ -13,6 +13,13 @@ export default function DayDetail() {
   const navigate = useNavigate();
   const dayNum = Number(day);
   const meta = DAY_META.find((d) => d.day === dayNum);
+  const today = todayDayNum();
+  // Only today's training day is reachable via /day/:day. Other days redirect
+  // back to dashboard (locked-tile semantics enforced at the route level).
+  const allowed = !!meta && (meta.rest || dayNum === today);
+  useEffect(() => {
+    if (!allowed) navigate("/dashboard", { replace: true });
+  }, [allowed, navigate]);
   const weekStart = useMemo(() => mondayKey(), []);
   const active = getActive();
   const pid = active ? (active.isGuest ? "guest" : active.profileId) : null;
@@ -25,8 +32,7 @@ export default function DayDetail() {
   const completedCount = workout?.completions?.length || 0;
   const status = workout?.dayCompleted ? "done" : "pending";
 
-  if (!meta) {
-    navigate("/dashboard");
+  if (!meta || !allowed) {
     return null;
   }
 

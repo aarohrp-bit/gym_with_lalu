@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronRight, LogOut, Moon, Dumbbell, RefreshCw, KeyRound, X } from "lucide-react";
+import { ChevronRight, LogOut, Moon, Dumbbell, RefreshCw, KeyRound, X, Lock } from "lucide-react";
 import {
   getActive,
   clearActive,
@@ -186,20 +186,32 @@ export default function Dashboard() {
           const restTile = d.rest;
           const category = restTile ? "Rest" : mapping[d.day] || "—";
           const cardCount = restTile ? 0 : EXERCISES_BY_CATEGORY[category]?.length || 0;
+          // Only today's training tile is actionable. Other training days are
+          // locked (view-only) and Sunday remains Rest.
+          const locked = !restTile && !isToday;
+          const interactive = !restTile && !locked;
           return (
             <motion.button
               key={d.day}
               data-testid={`day-tile-${d.label.toLowerCase()}`}
               data-category={category}
+              data-locked={locked ? "true" : "false"}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.04 * idx, duration: 0.3 }}
-              whileTap={restTile ? {} : { scale: 0.98 }}
-              onClick={() => !restTile && onOpenDay(d.day)}
-              disabled={restTile}
+              whileTap={interactive ? { scale: 0.98 } : {}}
+              onClick={() => interactive && onOpenDay(d.day)}
+              disabled={!interactive}
+              aria-disabled={!interactive}
               className={`text-left w-full bg-slate-900 border rounded-2xl p-5 flex items-center justify-between min-h-[88px] transition-colors ${
                 isToday ? "border-indigo-500/40" : "border-slate-800"
-              } ${restTile ? "opacity-70" : "active:bg-slate-800"}`}
+              } ${
+                interactive
+                  ? "active:bg-slate-800"
+                  : locked
+                  ? "opacity-50 cursor-not-allowed"
+                  : "opacity-70"
+              }`}
             >
               <div className="flex items-center gap-4">
                 <div className="w-12 text-center">
@@ -216,13 +228,28 @@ export default function Dashboard() {
                     {restTile ? "Rest" : category}
                   </p>
                   <p className="text-slate-500 text-xs font-body mt-1 flex items-center gap-1.5">
-                    {restTile ? <><Moon className="w-3 h-3" /> Recover</> : `${cardCount} exercises`}
+                    {restTile ? (
+                      <><Moon className="w-3 h-3" /> Recover</>
+                    ) : locked ? (
+                      <><Lock className="w-3 h-3" /> Locked — not today</>
+                    ) : (
+                      `${cardCount} exercises`
+                    )}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {!restTile && <StatusBadge status={status} testId={`day-status-${d.label.toLowerCase()}`} />}
-                {!restTile && <ChevronRight className="w-4 h-4 text-slate-600" />}
+                {!restTile && (
+                  <StatusBadge status={status} testId={`day-status-${d.label.toLowerCase()}`} />
+                )}
+                {interactive && <ChevronRight className="w-4 h-4 text-slate-600" />}
+                {locked && (
+                  <Lock
+                    className="w-4 h-4 text-slate-600"
+                    strokeWidth={1.75}
+                    data-testid={`day-lock-${d.label.toLowerCase()}`}
+                  />
+                )}
               </div>
             </motion.button>
           );
