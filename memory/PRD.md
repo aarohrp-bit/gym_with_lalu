@@ -3,7 +3,14 @@
 ## Original problem statement
 Build a Progressive Web App (PWA) called "Gym with Lalu" — a personal 6-day gym workout tracker for two users, fully installable to an Android home screen and working offline. React. No backend; everything in localStorage / IndexedDB. No login server, no cloud.
 
-## Phase 1 scope (DELIVERED 2026-02-14)
+## Phase 2 scope (DELIVERED 2026-02-14)
+1. Day Detail rewritten as an intro screen: category title, "Trains" line, "About" blurb, points indicator `n / 5 done`, and an "Enter workout" button. Rest day shows no Enter button.
+2. New `/workout/:day` Card Stack screen — Type A cards only, one card at a time, swipe-right to complete, double-tap to flip to coaching, counter `n / 5`, peek-behind stack effect, day completes at exactly 5 points.
+3. New `/summary/:day` Daily Summary screen — lists each completed exercise with HH:MM finish time, total session duration (first → last completion), and "Back to Week" button. Marks the day as Done on the dashboard.
+4. Persistence per `(profile, weekStart, dayNum)` in `localStorage.workouts` — closing & reopening on the same day restores points and completed list; duplicates prevented.
+5. Type B cards intentionally excluded from the workout stack (deferred to a later phase).
+
+
 1. PWA: manifest (`/manifest.json`, standalone, dumbbell SVG icon, theme `#020617`) + service worker (`/service-worker.js`, app-shell cache, install + activate + fetch handlers) + registration in `index.html`. Installable via Chrome "Add to Home Screen".
 2. Exercise database (hardcoded, in `/app/frontend/src/data/exercises.js`):
    - 6 training days × 8 cards each. Sunday = Rest.
