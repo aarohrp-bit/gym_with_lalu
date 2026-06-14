@@ -1,12 +1,18 @@
 /* Gym with Lalu — App Shell + Image Service Worker */
-const CACHE_NAME = "gym-with-lalu-v3";
+const CACHE_NAME = "gym-with-lalu-v4";
 
+// Paths are RELATIVE so they resolve correctly whether the app is served from "/"
+// (local dev) or from a subpath like "/gym_with_lalu/" (GitHub Pages). Relative URLs
+// resolve against this service worker's location (the app's scope directory).
 const APP_SHELL = [
-  "/",
-  "/index.html",
-  "/manifest.json",
-  "/dumbbell.svg"
+  "./",
+  "./index.html",
+  "./manifest.json",
+  "./dumbbell.svg",
+  "./icon-192.png",
+  "./icon-512.png"
 ];
+const INDEX_URL = new URL("./index.html", self.location).href;
 
 // All exercise/mini-exercise images (precached so the whole app works offline
 // after a single online visit — even images you haven't viewed yet).
@@ -20,7 +26,7 @@ const IMAGE_KEYS = [
   "9y024a","af051o","knipph","lh8t4i","wv5sk7","z6n3ow",
   "2pvxjw","5tbvis","iv79uj","xji55x","ogoyiy","g1qhqp"
 ];
-const IMAGE_URLS = IMAGE_KEYS.map((k) => `/exercises/${k}.webp`);
+const IMAGE_URLS = IMAGE_KEYS.map((k) => `./exercises/${k}.webp`);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -53,9 +59,9 @@ self.addEventListener("activate", (event) => {
 // would pin forever). Cache-first for images, which are immutable and keyed by id.
 const isShellOrCode = (url, req) =>
   req.mode === "navigate" ||
-  url.pathname === "/" ||
-  url.pathname === "/index.html" ||
-  url.pathname.startsWith("/static/") ||
+  url.pathname.endsWith("/") ||
+  url.pathname.endsWith("/index.html") ||
+  url.pathname.includes("/static/") ||
   url.pathname.endsWith(".js") ||
   url.pathname.endsWith(".css");
 
@@ -78,7 +84,7 @@ self.addEventListener("fetch", (event) => {
           return res;
         })
         .catch(() =>
-          caches.match(req).then((cached) => cached || caches.match("/index.html"))
+          caches.match(req).then((cached) => cached || caches.match(INDEX_URL))
         )
     );
     return;

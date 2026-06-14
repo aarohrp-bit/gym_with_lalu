@@ -8,6 +8,18 @@ import DayDetail from "@/pages/DayDetail";
 import Workout from "@/pages/Workout";
 import Summary from "@/pages/Summary";
 
+// Router basename so routes resolve under the GitHub Pages subpath (/gym_with_lalu)
+// while staying "/" for local dev (CRA sets PUBLIC_URL="" in development).
+const getBasename = () => {
+  const pub = process.env.PUBLIC_URL;
+  if (!pub) return "/";
+  try {
+    return new URL(pub, window.location.origin).pathname || "/";
+  } catch {
+    return pub.startsWith("/") ? pub : "/";
+  }
+};
+
 function App() {
   // Dev hooks: ?fastTimer=1 / ?fastGuard=1 persist across React Router nav via sessionStorage
   if (typeof window !== "undefined") {
@@ -21,7 +33,7 @@ function App() {
   }
   return (
     <div className="App" data-testid="app-root">
-      <BrowserRouter>
+      <BrowserRouter basename={getBasename()}>
         <Routes>
           <Route path="/" element={<ProfileSelect />} />
           <Route path="/add-profile" element={<AddProfile />} />
