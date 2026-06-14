@@ -14,9 +14,10 @@ export default function DayDetail() {
   const dayNum = Number(day);
   const meta = DAY_META.find((d) => d.day === dayNum);
   const today = todayDayNum();
-  // Only today's training day is reachable via /day/:day. Other days redirect
-  // back to dashboard (locked-tile semantics enforced at the route level).
-  const allowed = !!meta && (meta.rest || dayNum === today);
+  // Only today's training day is reachable via /day/:day, except on Sunday
+  // (rest day) when the lock is lifted entirely and any day can be opened.
+  const sundayOverride = today === 7;
+  const allowed = !!meta && (meta.rest || dayNum === today || sundayOverride);
   useEffect(() => {
     if (!allowed) navigate("/dashboard", { replace: true });
   }, [allowed, navigate]);

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
 import { ChevronLeft, RotateCw, ArrowRight, ArrowUp, Zap, Play, Lock } from "lucide-react";
 import { DAY_META, EXERCISES_BY_CATEGORY } from "@/data/exercises";
 import { imageForExerciseId } from "@/data/exerciseImages";
@@ -15,9 +15,10 @@ export default function Workout() {
   const navigate = useNavigate();
   const meta = DAY_META.find((d) => d.day === dayNum);
   const today = todayDayNum();
-  // Only today's training day is reachable. Any other day redirects back to
-  // the dashboard so the locked-day rule cannot be bypassed via URL.
-  const allowedDay = !!meta && !meta.rest && dayNum === today;
+  // Only today's training day is reachable. Sunday exception: when today is
+  // Sunday (rest day) the user can work out on ANY training day.
+  const sundayOverride = today === 7;
+  const allowedDay = !!meta && !meta.rest && (dayNum === today || sundayOverride);
   const weekStart = useMemo(() => mondayKey(), []);
   const active = getActive();
   const pid = active ? (active.isGuest ? "guest" : active.profileId) : null;
@@ -41,6 +42,11 @@ export default function Workout() {
   const [viewIdx, setViewIdx] = useState(0);
   const [skipping, setSkipping] = useState(false);
   const lastTap = useRef(0);
+  // Animation controls so we can imperatively snap the dragged card back to
+  // center when a swipe-right is rejected (guard active, threshold not met).
+  // Framer-motion's `animate={obj}` prop doesn't reliably reset after a drag
+  // when the target value hasn't changed — controls do.
+  const cardControls = useAnimationControls();
 
   // Eligible cards: ALL types (A + B), not yet completed
   // Sorted ascending by lifetime completion count (least-done first); guest = stable default order.
@@ -127,6 +133,12 @@ export default function Workout() {
     if (!top || completingId || skipping || top.type === "B" || guardActive) return;
     setCompletingId(top.id);
     addCompletion(pid, weekStart, dayNum, top.id, top.name);
+    cardControls.start({
+      x: 500,
+      opacity: 0,
+      rotate: 8,
+      transition: { type: "spring", stiffness: 260, damping: 28 },
+    });
     setTimeout(() => {
       setCompletedIds((s) => {
         const next = new Set(s);
@@ -139,6 +151,7 @@ export default function Workout() {
       // After a completion, the just-removed card was at safeViewIdx; the new
       // top should be remaining[0] of the next render, so reset viewIdx.
       setViewIdx(0);
+      cardControls.set({ x: 0, y: 0, opacity: 1, rotate: 0 });
     }, 320);
   };
 
@@ -150,9 +163,16 @@ export default function Workout() {
     if (remaining.length <= 1) return; // nothing to cycle to
     setSkipping(true);
     setFlipped(false);
+    cardControls.start({
+      y: -600,
+      opacity: 0,
+      rotate: -2,
+      transition: { type: "spring", stiffness: 260, damping: 28 },
+    });
     setTimeout(() => {
       setViewIdx((i) => (i + 1) % remaining.length);
       setSkipping(false);
+      cardControls.set({ x: 0, y: 0, opacity: 1, rotate: 0 });
     }, 260);
   };
 
@@ -167,7 +187,16 @@ export default function Workout() {
     // Horizontal dominant → maybe complete (A only, not guarded).
     if (x > 110 && (info.velocity?.x ?? 0) > -100 && top?.type === "A" && !guardActive) {
       completeTop();
+      return;
     }
+    // No action fired (rejected swipe — guard active, below threshold, B card,
+    // or wrong direction) — spring the card back to center so it isn't stuck.
+    cardControls.start({
+      x: 0,
+      y: 0,
+      rotate: 0,
+      transition: { type: "spring", stiffness: 400, damping: 30 },
+    });
   };
 
   const onCircuitFinish = () => {
@@ -276,14 +305,8 @@ export default function Workout() {
               dragElastic={0.25}
               onDragEnd={onDragEnd}
               onTap={handleTap}
-              animate={
-                completingId === top.id
-                  ? { x: 500, y: 0, opacity: 0, rotate: 8 }
-                  : skipping
-                  ? { x: 0, y: -600, opacity: 0, rotate: -2 }
-                  : { x: 0, y: 0, opacity: 1, rotate: 0 }
-              }
-              transition={{ type: "spring", stiffness: 260, damping: 28 }}
+              initial={{ x: 0, y: 0, opacity: 1, rotate: 0 }}
+              animate={cardControls}
               className="relative w-full aspect-[3/4] rounded-3xl cursor-grab active:cursor-grabbing touch-none"
               style={{ transformStyle: "preserve-3d" }}
             >

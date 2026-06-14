@@ -186,9 +186,10 @@ export default function Dashboard() {
           const restTile = d.rest;
           const category = restTile ? "Rest" : mapping[d.day] || "—";
           const cardCount = restTile ? 0 : EXERCISES_BY_CATEGORY[category]?.length || 0;
-          // Only today's training tile is actionable. Other training days are
-          // locked (view-only) and Sunday remains Rest.
-          const locked = !restTile && !isToday;
+          // Lock rule: Mon-Sat only today is interactive. Sunday exception —
+          // when today IS Sunday (rest day) the user can open ANY training day.
+          const sundayOverride = today === 7;
+          const locked = !restTile && !isToday && !sundayOverride;
           const interactive = !restTile && !locked;
           return (
             <motion.button
