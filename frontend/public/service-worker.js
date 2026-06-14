@@ -1,10 +1,12 @@
 /* Gym with Lalu — App Shell Service Worker */
-const CACHE_NAME = "gym-with-lalu-v2";
+const CACHE_NAME = "gym-with-lalu-v3";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/manifest.json",
-  "/dumbbell.svg"
+  "/dumbbell.svg",
+  "/icon-192.png",
+  "/icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
