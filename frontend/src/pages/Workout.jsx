@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, RotateCw, ArrowRight, Zap, Play, Lock } from "lucide-react";
+import { ChevronLeft, RotateCw, ArrowRight, ArrowUp, Zap, Play, Lock } from "lucide-react";
 import { DAY_META, EXERCISES, categoryTitle } from "@/data/exercises";
 import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds, ensureWeek } from "@/lib/storage";
 import { mondayKey } from "@/lib/week";
@@ -33,6 +33,7 @@ export default function Workout() {
   const [flipped, setFlipped] = useState(false);
   const [completingId, setCompletingId] = useState(null);
   const [circuitOpen, setCircuitOpen] = useState(false);
+  const [exit, setExit] = useState({ x: 520, y: 0 });
   const lastTap = useRef(0);
 
   // Eligible cards: ALL types (A + B), not yet completed
@@ -119,10 +120,24 @@ export default function Workout() {
     }, 320);
   };
 
+  // Swipe gestures (A cards). Right OR up = complete; down = flip to coaching.
+  // Forgiving: either a distance past the threshold or a quick fling triggers it.
+  const SWIPE_DIST = 80;
+  const FLING_VEL = 550;
   const onDragEnd = (_, info) => {
-    if (top?.type === "B" || guardActive) return;
-    if (info.offset.x > 110 && info.velocity.x > -100) {
+    if (top?.type === "B" || guardActive || completingId) return;
+    const { offset, velocity } = info;
+    const right = offset.x > SWIPE_DIST || velocity.x > FLING_VEL;
+    const up = offset.y < -SWIPE_DIST || velocity.y < -FLING_VEL;
+    const down = offset.y > SWIPE_DIST || velocity.y > FLING_VEL;
+    if (right) {
+      setExit({ x: 560, y: 0 });
       completeTop();
+    } else if (up) {
+      setExit({ x: 0, y: -760 });
+      completeTop();
+    } else if (down) {
+      setFlipped((f) => !f);
     }
   };
 
@@ -220,15 +235,15 @@ export default function Workout() {
             <motion.div
               key={top.id}
               data-testid={`workout-card-${top.id}`}
-              drag={!completingId && top.type === "A" ? "x" : false}
-              dragConstraints={{ left: -30, right: 400 }}
-              dragElastic={0.25}
+              drag={!completingId && top.type === "A" ? true : false}
+              dragConstraints={{ left: -60, right: 400, top: -400, bottom: 60 }}
+              dragElastic={0.4}
               onDragEnd={onDragEnd}
               onTap={handleTap}
               animate={
                 completingId === top.id
-                  ? { x: 500, opacity: 0, rotate: 8 }
-                  : { x: 0, opacity: 1, rotate: 0 }
+                  ? { x: exit.x, y: exit.y, opacity: 0, rotate: exit.x ? 8 : 0 }
+                  : { x: 0, y: 0, opacity: 1, rotate: 0 }
               }
               transition={{ type: "spring", stiffness: 260, damping: 28 }}
               className={`relative w-full aspect-[3/4] rounded-3xl ${top.type === "A" ? "cursor-grab active:cursor-grabbing touch-none" : ""}`}
@@ -308,7 +323,7 @@ export default function Workout() {
                       {top.name}
                     </h2>
                     <p className="text-slate-500 text-xs font-body mt-2 uppercase tracking-wider">
-                      Double-tap to flip · Swipe right to complete
+                      Double-tap or swipe down to flip · Swipe right or up to complete
                     </p>
                   </div>
 
@@ -362,7 +377,14 @@ export default function Workout() {
           >
             <ArrowRight className="w-4 h-4" strokeWidth={1.5} />
           </motion.span>
-          <span>to mark complete</span>
+          <span>right or</span>
+          <motion.span
+            animate={{ y: [0, -6, 0] }}
+            transition={{ duration: 1.2, repeat: Infinity }}
+          >
+            <ArrowUp className="w-4 h-4" strokeWidth={1.5} />
+          </motion.span>
+          <span>up to complete</span>
         </div>
       )}
 
