@@ -1,7 +1,7 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ChevronLeft, Play, CheckCircle2, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, Play, CheckCircle2, Sparkles, AlertTriangle } from "lucide-react";
 import { DAY_META, EXERCISES, categoryTitle } from "@/data/exercises";
 import { CATEGORY_BLURBS } from "@/data/categoryBlurbs";
 import { getActive, getWorkout, resetWorkout, ensureWeek } from "@/lib/storage";
@@ -14,6 +14,7 @@ export default function DayDetail() {
   const navigate = useNavigate();
   const dayNum = Number(day);
   const meta = DAY_META.find((d) => d.day === dayNum);
+  const [confirmReset, setConfirmReset] = useState(false);
   const weekStart = useMemo(() => mondayKey(), []);
   const active = getActive();
   const pid = active ? (active.isGuest ? "guest" : active.profileId) : null;
@@ -42,12 +43,10 @@ export default function DayDetail() {
     }
   };
 
-  const onRestart = () => {
+  const doRestart = () => {
     if (!pid) return;
-    if (window.confirm("Reset today's progress for this day?")) {
-      resetWorkout(pid, weekStart, dayNum);
-      navigate(`/workout/${dayNum}`);
-    }
+    resetWorkout(pid, weekStart, dayNum);
+    navigate(`/workout/${dayNum}`);
   };
 
   return (
@@ -118,7 +117,7 @@ export default function DayDetail() {
               <motion.button
                 whileTap={{ scale: 0.97 }}
                 data-testid="restart-day-button"
-                onClick={onRestart}
+                onClick={() => setConfirmReset(true)}
                 className="w-full bg-slate-900/90 backdrop-blur border border-slate-800 text-slate-300 rounded-2xl py-3.5 font-body font-medium text-sm"
               >
                 Restart this day
@@ -142,6 +141,52 @@ export default function DayDetail() {
           <p className="font-display text-2xl text-slate-400 tracking-tight">No workout today.</p>
         </div>
       )}
+
+      {/* In-app confirm dialog */}
+      <AnimatePresence>
+        {confirmReset && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center px-6"
+            data-testid="confirm-dialog"
+            onClick={() => setConfirmReset(false)}
+          >
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 20, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-4">
+                <AlertTriangle className="w-5 h-5 text-amber-400" strokeWidth={1.75} />
+              </div>
+              <h3 className="font-display text-3xl font-bold text-white tracking-tight">Restart this day?</h3>
+              <p className="font-body text-slate-400 text-sm mt-2 leading-relaxed">
+                Clears today's completed exercises so you can start this day's workout over.
+              </p>
+              <div className="flex gap-2 mt-6">
+                <button
+                  data-testid="confirm-cancel"
+                  onClick={() => setConfirmReset(false)}
+                  className="flex-1 bg-slate-800 text-white rounded-2xl py-3.5 font-body font-medium active:bg-slate-700 min-h-[52px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  data-testid="confirm-ok"
+                  onClick={doRestart}
+                  className="flex-1 bg-amber-500/20 border border-amber-500/40 text-amber-200 rounded-2xl py-3.5 font-body font-semibold active:bg-amber-500/30 min-h-[52px]"
+                >
+                  Restart
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

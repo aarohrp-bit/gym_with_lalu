@@ -16,6 +16,24 @@ body {
     overscroll-behavior-y: none;
 }
 
+/* Native-app feel: no text selection, no long-press callout, no tap highlight. */
+* {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+}
+
+/* Inputs still need selection/typing. */
+input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+}
+
 .font-display {
     font-family: "Barlow Condensed", "DM Sans", sans-serif;
     letter-spacing: -0.01em;

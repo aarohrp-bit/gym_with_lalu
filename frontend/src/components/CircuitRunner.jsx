@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, RotateCw, Flag, Pause } from "lucide-react";
 
-const CIRCUIT_SECONDS = 12 * 60; // 12:00
+const CIRCUIT_SECONDS = 10 * 60; // 10:00
 const FAST_CIRCUIT_SECONDS = 3; // dev-only fast timer when ?fastTimer=1
 
 const fmtMMSS = (s) => {
@@ -65,11 +65,12 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-slate-950 flex flex-col"
+      className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center select-none"
       data-testid="circuit-overlay"
       role="dialog"
       aria-modal="true"
     >
+      <div className="w-full max-w-md mx-auto flex-1 flex flex-col min-h-0">
       {/* Abort fixed at top */}
       <div className="px-6 pt-6 flex items-center justify-between">
         <button
@@ -89,7 +90,7 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
       </div>
 
       {/* Sub-card area */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-6">
+      <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-6 py-4">
         <div className="w-full flex items-center justify-between mb-3">
           <p className="text-[10px] uppercase tracking-[0.22em] text-indigo-300/70 font-body" data-testid="circuit-card-index">
             {idx + 1} of {mini.length}
@@ -104,14 +105,16 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
         <motion.div
           key={idx}
           drag="x"
-          dragConstraints={{ left: -50, right: 50 }}
-          dragElastic={0.3}
+          dragDirectionLock
+          dragConstraints={{ left: 0, right: 0 }}
+          dragSnapToOrigin
+          dragElastic={0.35}
           onDragEnd={onDragEnd}
           onTap={handleTap}
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.25 }}
-          className="w-full aspect-[3/4] rounded-3xl touch-none cursor-grab active:cursor-grabbing"
+          className="w-full flex-1 min-h-0 rounded-3xl touch-none cursor-grab active:cursor-grabbing"
           style={{ transformStyle: "preserve-3d" }}
           data-testid={`circuit-sub-card-${idx}`}
         >
@@ -205,6 +208,7 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
             Finish
           </button>
         </div>
+      </div>
       </div>
 
       {/* Abort confirmation */}

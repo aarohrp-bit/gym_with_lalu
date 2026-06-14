@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ChevronRight, LogOut, Moon, Dumbbell, Sprout, RotateCcw, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronRight, LogOut, Moon, Dumbbell, Sprout, RotateCcw, X, AlertTriangle } from "lucide-react";
 import {
   getActive, clearActive, getWeekProgress, getProfile,
   ensureWeek, applySeed, startNewWeek,
@@ -18,6 +18,7 @@ export default function Dashboard() {
   const [week, setWeek] = useState(null);
   const [seedInput, setSeedInput] = useState("");
   const [showSeed, setShowSeed] = useState(false);
+  const [confirm, setConfirm] = useState(null); // { title, message, label, onConfirm }
   const weekStart = useMemo(() => mondayKey(), []);
   const today = todayDayNum();
 
@@ -40,13 +41,6 @@ export default function Dashboard() {
   };
   const onOpenDay = (day) => navigate(`/day/${day}`);
 
-  const refresh = () => {
-    if (!active) return;
-    const pid = pidOf(active);
-    setWeek(ensureWeek(pid, weekStart));
-    setProgress(getWeekProgress(pid, weekStart));
-  };
-
   const onApplySeed = () => {
     if (!active || !seedInput.trim()) return;
     const pid = pidOf(active);
@@ -55,22 +49,31 @@ export default function Dashboard() {
     setShowSeed(false);
   };
 
-  const onClearSeed = () => {
+  const doReset = () => {
     if (!active) return;
     const pid = pidOf(active);
-    if (!window.confirm("Clear the seed and shuffle a fresh personalized week? This resets this week's progress.")) return;
     setWeek(startNewWeek(pid, weekStart));
     setProgress(getWeekProgress(pid, weekStart));
     setSeedInput("");
+    setConfirm(null);
+  };
+
+  const onClearSeed = () => {
+    setConfirm({
+      title: "Clear this seed?",
+      message: "Shuffles a fresh personalized week and resets this week's progress and timers.",
+      label: "Clear seed",
+      onConfirm: doReset,
+    });
   };
 
   const onNewWeek = () => {
-    if (!active) return;
-    if (!window.confirm("Start a new week? This shuffles the layout and resets this week's progress.")) return;
-    const pid = pidOf(active);
-    setWeek(startNewWeek(pid, weekStart));
-    setProgress(getWeekProgress(pid, weekStart));
-    setSeedInput("");
+    setConfirm({
+      title: "Start a new week?",
+      message: "Shuffles the layout and resets this week's progress and timers.",
+      label: "Start new week",
+      onConfirm: doReset,
+    });
   };
 
   if (!active) return null;
@@ -179,8 +182,14 @@ export default function Dashboard() {
       {/* Day tiles */}
       <div className="flex flex-col gap-3" data-testid="day-tiles">
         {DAY_META.map((d, idx) => {
-          const status = progress[d.day] || "pending";
+          const rawStatus = progress[d.day];
           const isToday = d.day === today;
+          // "Pending" shows only on today's scheduled day. Done shows any day.
+          // Past undone training days read as "Skipped"; future days show no badge.
+          let badgeStatus = null;
+          if (rawStatus === "done") badgeStatus = "done";
+          else if (isToday) badgeStatus = "pending";
+          else if (d.day < today) badgeStatus = "skipped";
           const catId = categoryForDay(week, d.day);
           const title = d.rest ? "Rest" : categoryTitle(catId);
           const cardCount = d.rest ? 0 : (EXERCISES[catId]?.length || 0);
@@ -214,7 +223,7 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {!restTile && <StatusBadge status={status} testId={`day-status-${d.label.toLowerCase()}`} />}
+                {!restTile && badgeStatus && <StatusBadge status={badgeStatus} testId={`day-status-${d.label.toLowerCase()}`} />}
                 {!restTile && <ChevronRight className="w-4 h-4 text-slate-600" />}
               </div>
             </motion.button>
@@ -225,6 +234,50 @@ export default function Dashboard() {
       <p className="text-center text-[11px] text-slate-600 mt-8 font-body tracking-wide">
         Week of {weekStart}
       </p>
+
+      {/* In-app confirm dialog (replaces the browser's window.confirm) */}
+      <AnimatePresence>
+        {confirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center px-6"
+            data-testid="confirm-dialog"
+            onClick={() => setConfirm(null)}
+          >
+            <motion.div
+              initial={{ y: 20, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 20, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mb-4">
+                <AlertTriangle className="w-5 h-5 text-amber-400" strokeWidth={1.75} />
+              </div>
+              <h3 className="font-display text-3xl font-bold text-white tracking-tight">{confirm.title}</h3>
+              <p className="font-body text-slate-400 text-sm mt-2 leading-relaxed">{confirm.message}</p>
+              <div className="flex gap-2 mt-6">
+                <button
+                  data-testid="confirm-cancel"
+                  onClick={() => setConfirm(null)}
+                  className="flex-1 bg-slate-800 text-white rounded-2xl py-3.5 font-body font-medium active:bg-slate-700 min-h-[52px]"
+                >
+                  Cancel
+                </button>
+                <button
+                  data-testid="confirm-ok"
+                  onClick={() => confirm.onConfirm?.()}
+                  className="flex-1 bg-amber-500/20 border border-amber-500/40 text-amber-200 rounded-2xl py-3.5 font-body font-semibold active:bg-amber-500/30 min-h-[52px]"
+                >
+                  {confirm.label}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -86,6 +86,25 @@ Build a Progressive Web App (PWA) called "Gym with Lalu" — a personal 6-day gy
    403 build blocker), removed the non-existent PNG icon entries from the manifest, and removed
    the external Emergent badge/script so the app is fully self-contained and offline-capable.
 
+## Final UX pass (DELIVERED 2026-06-14) — Android-ready
+- **Gestures reworked** (axis-locked, no free/diagonal drag via `dragDirectionLock`):
+  swipe **right** = finish exercise; swipe **up/down** = browse the remaining (not-done) cards;
+  double-tap = flip. Cards snap back (`dragSnapToOrigin`) and use a directional carousel
+  (`AnimatePresence`) so the next card actually appears (fixes the stuck-card bug).
+- **Type B**: cannot be finished by swiping — Start the circuit; when the 10-minute timer ends,
+  Finish marks the point and removes the card. If <5 points the next card shows; at 5 the summary opens.
+- **Circuit timer set to 10:00** (was 12:00).
+- **CircuitRunner** constrained to mobile width (`max-w-md`) so it no longer blows up to full-screen
+  on wide/desktop windows; sub-cards are axis-locked too.
+- **In-app confirm dialogs** replace `window.confirm` for clear-seed, new-week, and restart-day
+  (consistent look on Android, no browser chrome).
+- **Applying a seed / starting a new week** now also resets the recovery-lock timer and this
+  week's progress.
+- **Card height** maximised to fill the screen; counter row compacted.
+- **Dashboard "Pending" badge** shows only on today's scheduled day; past undone training days
+  read as "Skipped"; future days show no badge.
+- **Native feel**: global `user-select: none` + no tap-highlight/callout (inputs still selectable).
+
 ## Backlog (Prioritized) — for future phases
 ### P0 (next)
 - [ ] Full coaching text for `howTo` and `whatItDoes` on every exercise (user will paste).

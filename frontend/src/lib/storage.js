@@ -214,9 +214,10 @@ export const applySeed = (profileId, weekStartIso, seedString) => {
     prevDayCategory,
     weekStartIso,
   });
-  // A new layout invalidates this week's in-progress data.
+  // A new layout invalidates this week's in-progress data + resets the recovery-lock timer.
   if (data.workouts[profileId]) delete data.workouts[profileId][weekStartIso];
   if (data.progress[profileId]) delete data.progress[profileId][weekStartIso];
+  if (data.lastCompletionAt) delete data.lastCompletionAt[profileId];
   save(data);
   return data.weeks[profileId][weekStartIso];
 };
