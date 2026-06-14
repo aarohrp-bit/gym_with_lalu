@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, RotateCw, ArrowRight, Zap, Play } from "lucide-react";
+import { ChevronLeft, RotateCw, ArrowRight, Zap, Play, Lock } from "lucide-react";
 import { DAY_META, EXERCISES } from "@/data/exercises";
-import { getActive, getWorkout, addCompletion, POINTS_TARGET } from "@/lib/storage";
+import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds } from "@/lib/storage";
 import { mondayKey } from "@/lib/week";
 import CircuitRunner from "@/components/CircuitRunner";
 
@@ -32,14 +32,34 @@ export default function Workout() {
   const lastTap = useRef(0);
 
   // Eligible cards: ALL types (A + B), not yet completed
-  const allCards = useMemo(
-    () => (EXERCISES[dayNum] || []),
-    [dayNum]
-  );
+  // Sorted ascending by lifetime completion count (least-done first); guest = stable default order.
+  const counts = useMemo(() => (pid ? getCounts(pid) : {}), [pid]);
+  const allCards = useMemo(() => {
+    const base = EXERCISES[dayNum] || [];
+    if (!pid || pid === "guest") return base;
+    return base
+      .map((e, i) => ({ e, i, c: counts[e.id] || 0 }))
+      .sort((a, b) => a.c - b.c || a.i - b.i)
+      .map((x) => x.e);
+  }, [dayNum, pid, counts]);
   const remaining = useMemo(
     () => allCards.filter((e) => !completedIds.has(e.id)),
     [allCards, completedIds]
   );
+
+  // ── Five-minute guard ───────────────────────────────────────────
+  const guardSeconds = useMemo(() => getGuardSeconds(), []);
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  const lastAt = pid ? getLastCompletionAt(pid) : null;
+  const lastMs = lastAt ? new Date(lastAt).getTime() : 0;
+  const secsSince = lastMs ? Math.floor((now - lastMs) / 1000) : Infinity;
+  const guardActive = secsSince < guardSeconds && points < POINTS_TARGET;
+  const guardRemaining = guardActive ? guardSeconds - secsSince : 0;
+  const fmtGuard = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
   useEffect(() => {
     if (!active) navigate("/");
@@ -70,7 +90,7 @@ export default function Workout() {
   };
 
   const completeTop = () => {
-    if (!top || completingId || top.type === "B") return;
+    if (!top || completingId || top.type === "B" || guardActive) return;
     setCompletingId(top.id);
     addCompletion(pid, weekStart, dayNum, top.id, top.name);
     setTimeout(() => {
@@ -86,7 +106,7 @@ export default function Workout() {
   };
 
   const onDragEnd = (_, info) => {
-    if (top?.type === "B") return;
+    if (top?.type === "B" || guardActive) return;
     if (info.offset.x > 110 && info.velocity.x > -100) {
       completeTop();
     }
@@ -128,6 +148,22 @@ export default function Workout() {
           <p className="font-display text-xl text-white uppercase tracking-tight -mt-0.5">{meta.title}</p>
         </div>
       </div>
+
+      {/* Five-minute guard banner */}
+      {guardActive && (
+        <div
+          data-testid="guard-banner"
+          className="mb-3 px-4 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3"
+        >
+          <Lock className="w-4 h-4 text-amber-300 flex-shrink-0" strokeWidth={1.75} />
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-amber-300/80 font-body">Recovery lock</p>
+            <p className="font-display text-base text-white tracking-tight leading-none mt-0.5">
+              Next completion in <span data-testid="guard-remaining">{fmtGuard(guardRemaining)}</span>
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Counter */}
       <div className="mb-6 p-4 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
@@ -319,6 +355,8 @@ export default function Workout() {
       {circuitOpen && top?.type === "B" && top.circuit && (
         <CircuitRunner
           circuit={top.circuit}
+          guardActive={guardActive}
+          guardRemaining={guardRemaining}
           onAbort={onCircuitAbort}
           onFinish={onCircuitFinish}
         />

@@ -11,7 +11,7 @@ const fmtMMSS = (s) => {
   return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
 };
 
-export default function CircuitRunner({ circuit, onAbort, onFinish }) {
+export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive = false, guardRemaining = 0 }) {
   const fastTimer =
     typeof window !== "undefined" &&
     (window.location.search.includes("fastTimer=1") ||
@@ -59,7 +59,8 @@ export default function CircuitRunner({ circuit, onAbort, onFinish }) {
     }
   };
 
-  const canFinish = secondsLeft <= 0;
+  const canFinish = secondsLeft <= 0 && !guardActive;
+  const fmtGuard = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   const current = mini[idx];
 
   return (
@@ -163,7 +164,7 @@ export default function CircuitRunner({ circuit, onAbort, onFinish }) {
         >
           <div>
             <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500 font-body">
-              {canFinish ? "Done — finish to claim" : "Time remaining"}
+              {canFinish ? "Done — finish to claim" : guardActive && secondsLeft <= 0 ? `Locked · ${fmtGuard(guardRemaining)}` : "Time remaining"}
             </p>
             <p
               className={`font-display text-5xl font-bold tracking-tight leading-none mt-0.5 ${

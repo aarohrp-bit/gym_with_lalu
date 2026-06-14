@@ -37,6 +37,11 @@ export const EXERCISES = {
     mk(1, "Cable Upright Rows"),
   ],
   2: [
+    mk(2, "Pec Deck Machine Flyes"),
+    mk(2, "Flat Dumbbell Bench Press"),
+    mk(2, "Dumbbell Squeeze Press"),
+    mk(2, "Single-Arm Flat Dumbbell Press"),
+    mk(2, "Incline Dumbbell Bench Press"),
     mk(2, "Circuit B2 Power & Conditioning", "B", {
       name: "B2 Power & Conditioning",
       miniExercises: [
@@ -48,11 +53,6 @@ export const EXERCISES = {
         "High Knees",
       ],
     }),
-    mk(2, "Pec Deck Machine Flyes"),
-    mk(2, "Flat Dumbbell Bench Press"),
-    mk(2, "Dumbbell Squeeze Press"),
-    mk(2, "Single-Arm Flat Dumbbell Press"),
-    mk(2, "Incline Dumbbell Bench Press"),
     mk(2, "Dumbbell Pullover"),
     mk(2, "High-to-Low Cable Crossovers"),
   ],
@@ -87,6 +87,12 @@ export const EXERCISES = {
     mk(5, "Incline Chest-Supported Dumbbell Rows"),
   ],
   6: [
+    mk(6, "Low Cable Bicep Curls"),
+    mk(6, "Dumbbell Preacher Curls"),
+    mk(6, "Seated Dumbbell Bicep Curls"),
+    mk(6, "Dumbbell Hammer Curls"),
+    mk(6, "Incline Dumbbell Bicep Curls"),
+    mk(6, "Seated Dumbbell Concentration Curls"),
     mk(6, "Circuit B1 Cardio Box", "B", {
       name: "B1 Cardio Box",
       miniExercises: [
@@ -98,12 +104,6 @@ export const EXERCISES = {
         "Box Jumps",
       ],
     }),
-    mk(6, "Low Cable Bicep Curls"),
-    mk(6, "Dumbbell Preacher Curls"),
-    mk(6, "Seated Dumbbell Bicep Curls"),
-    mk(6, "Dumbbell Hammer Curls"),
-    mk(6, "Incline Dumbbell Bicep Curls"),
-    mk(6, "Seated Dumbbell Concentration Curls"),
     mk(6, "Seated Dumbbell Wrist Curls"),
   ],
   7: [], // Rest day

@@ -7,6 +7,17 @@ const empty = () => ({ profiles: [], progress: {}, workouts: {} });
 // Per-day workout target — day is "done" at exactly this many A-card completions.
 export const POINTS_TARGET = 5;
 
+// Five-minute completion guard (between every A swipe and every B Finish).
+export const GUARD_SECONDS_REAL = 5 * 60;
+export const GUARD_SECONDS_FAST = 5;
+export const getGuardSeconds = () => {
+  if (typeof window === "undefined") return GUARD_SECONDS_REAL;
+  const fast =
+    window.sessionStorage?.getItem("fastGuard") === "1" ||
+    window.location.search.includes("fastGuard=1");
+  return fast ? GUARD_SECONDS_FAST : GUARD_SECONDS_REAL;
+};
+
 export const load = () => {
   try {
     const raw = localStorage.getItem(KEY);
@@ -16,6 +27,8 @@ export const load = () => {
     parsed.profiles ||= [];
     parsed.progress ||= {};
     parsed.workouts ||= {};
+    parsed.counts ||= {};
+    parsed.lastCompletionAt ||= {};
     return parsed;
   } catch {
     return empty();
@@ -112,6 +125,12 @@ export const addCompletion = (profileId, weekStartIso, dayNum, exerciseId, name)
     name,
     completedAt: new Date().toISOString(),
   });
+  // Lifetime counts (not for guest) + last completion timestamp (always)
+  if (profileId !== "guest") {
+    data.counts[profileId] ||= {};
+    data.counts[profileId][exerciseId] = (data.counts[profileId][exerciseId] || 0) + 1;
+  }
+  data.lastCompletionAt[profileId] = new Date().toISOString();
   if (w.completions.length >= POINTS_TARGET) {
     w.dayCompleted = true;
     w.finishedAt = new Date().toISOString();
@@ -132,6 +151,17 @@ export const resetWorkout = (profileId, weekStartIso, dayNum) => {
     delete data.progress[profileId][weekStartIso][dayNum];
   }
   save(data);
+};
+
+export const getCounts = (profileId) => {
+  if (profileId === "guest") return {};
+  const data = load();
+  return data.counts[profileId] || {};
+};
+
+export const getLastCompletionAt = (profileId) => {
+  const data = load();
+  return data.lastCompletionAt[profileId] || null;
 };
 
 // Active profile session helpers (sessionStorage so refresh remembers, but new tab = relock)
