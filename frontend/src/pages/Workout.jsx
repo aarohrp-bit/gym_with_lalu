@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, RotateCw, ArrowRight, Zap, Play, Lock } from "lucide-react";
 import { DAY_META, EXERCISES_BY_CATEGORY } from "@/data/exercises";
+import { imageForExerciseId } from "@/data/exerciseImages";
 import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds, getWeeklyMapping, getActiveSeed } from "@/lib/storage";
 import { deriveSeededCardOrders } from "@/lib/seed";
 import { mondayKey } from "@/lib/week";
@@ -292,10 +293,21 @@ export default function Workout() {
                         {points + 1} of stack
                       </p>
                     </div>
-                    <div className="flex-1 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center p-6 mb-5">
-                      <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center">
-                        {top.name}
-                      </p>
+                    <div className="flex-1 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden mb-5">
+                      {imageForExerciseId(top.id) ? (
+                        <img
+                          src={imageForExerciseId(top.id)}
+                          alt={top.name}
+                          loading="eager"
+                          className="w-full h-full object-cover"
+                          data-testid="card-image"
+                          draggable={false}
+                        />
+                      ) : (
+                        <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center p-6">
+                          {top.name}
+                        </p>
+                      )}
                     </div>
                     <h2 className="font-display text-3xl text-white font-bold tracking-tight leading-tight" data-testid="card-name">
                       {top.name}

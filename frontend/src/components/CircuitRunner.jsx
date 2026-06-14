@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, RotateCw, Flag, Pause } from "lucide-react";
+import { imageForMiniName } from "@/data/exerciseImages";
 
 const CIRCUIT_SECONDS = 12 * 60; // 12:00
 const FAST_CIRCUIT_SECONDS = 3; // dev-only fast timer when ?fastTimer=1
@@ -125,10 +126,21 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
               className="absolute inset-0 rounded-3xl bg-slate-900 border border-slate-800 p-6 flex flex-col"
               style={{ backfaceVisibility: "hidden" }}
             >
-              <div className="flex-1 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center p-6 mb-4">
-                <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center">
-                  {current}
-                </p>
+              <div className="flex-1 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden mb-4">
+                {imageForMiniName(current) ? (
+                  <img
+                    src={imageForMiniName(current)}
+                    alt={current}
+                    loading="eager"
+                    className="w-full h-full object-cover"
+                    data-testid="circuit-mini-image"
+                    draggable={false}
+                  />
+                ) : (
+                  <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center p-6">
+                    {current}
+                  </p>
+                )}
               </div>
               <h3 className="font-display text-2xl text-white font-bold tracking-tight leading-tight" data-testid="circuit-mini-name">
                 {current}
