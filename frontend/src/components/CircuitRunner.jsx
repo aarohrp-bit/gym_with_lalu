@@ -1,9 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, RotateCw, Flag, Pause } from "lucide-react";
-
-const CIRCUIT_SECONDS = 10 * 60; // 10:00
-const FAST_CIRCUIT_SECONDS = 3; // dev-only fast timer when ?fastTimer=1
+import { getCircuitSeconds } from "@/lib/storage";
 
 const fmtMMSS = (s) => {
   const m = Math.floor(s / 60);
@@ -12,12 +10,7 @@ const fmtMMSS = (s) => {
 };
 
 export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive = false, guardRemaining = 0 }) {
-  const fastTimer =
-    typeof window !== "undefined" &&
-    (window.location.search.includes("fastTimer=1") ||
-      window.sessionStorage?.getItem("fastTimer") === "1");
-  const initialSeconds = fastTimer ? FAST_CIRCUIT_SECONDS : CIRCUIT_SECONDS;
-  const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
+  const [secondsLeft, setSecondsLeft] = useState(() => getCircuitSeconds());
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [confirming, setConfirming] = useState(false);
@@ -135,7 +128,7 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
                     alt={current.name}
                     draggable={false}
                     data-testid="circuit-mini-image"
-                    className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+                    className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
                   />
                 ) : (

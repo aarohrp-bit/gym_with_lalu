@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, LogOut, Moon, Dumbbell, Sprout, RotateCcw, X, AlertTriangle } from "lucide-react";
+import { ChevronRight, Settings, Moon, Dumbbell, Sprout, RotateCcw, X, AlertTriangle, Lock } from "lucide-react";
 import {
-  getActive, clearActive, getWeekProgress, getProfile,
+  getActive, getWeekProgress, getProfile,
   ensureWeek, applySeed, startNewWeek,
 } from "@/lib/storage";
 import { mondayKey, todayDayNum } from "@/lib/week";
@@ -33,12 +33,6 @@ export default function Dashboard() {
     setProgress(getWeekProgress(pid, weekStart));
   }, [navigate, weekStart]);
 
-  const onLogout = () => {
-    // Prevent the default-profile auto-advance from immediately bouncing us back.
-    try { sessionStorage.setItem("gym_lalu_skip_auto", "1"); } catch { /* ignore */ }
-    clearActive();
-    navigate("/");
-  };
   const onOpenDay = (day) => navigate(`/day/${day}`);
 
   const onApplySeed = () => {
@@ -80,6 +74,10 @@ export default function Dashboard() {
   const profile = active.isGuest ? { name: "Guest" } : getProfile(active.profileId);
   const doneCount = Object.entries(progress).filter(([d, s]) => Number(d) <= 6 && s === "done").length;
   const seedActive = !!week?.seed;
+  // A training day can only be performed on its scheduled day — unless a seed is active
+  // or today is the Sunday rest day (then you may catch up on any day).
+  const allDaysOpen = seedActive || today === 7;
+  const isUnlocked = (dayNum) => allDaysOpen || dayNum === today;
 
   return (
     <div className="w-full max-w-md mx-auto px-6 pt-10 pb-24 min-h-screen">
@@ -94,12 +92,12 @@ export default function Dashboard() {
           </h1>
         </div>
         <button
-          data-testid="logout-button"
-          onClick={onLogout}
+          data-testid="settings-button"
+          onClick={() => navigate("/settings")}
           className="w-11 h-11 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center active:bg-slate-800"
-          aria-label="Switch profile"
+          aria-label="Settings"
         >
-          <LogOut className="w-4 h-4 text-slate-400" strokeWidth={1.75} />
+          <Settings className="w-4 h-4 text-slate-400" strokeWidth={1.75} />
         </button>
       </div>
 
@@ -194,6 +192,9 @@ export default function Dashboard() {
           const title = d.rest ? "Rest" : categoryTitle(catId);
           const cardCount = d.rest ? 0 : (EXERCISES[catId]?.length || 0);
           const restTile = d.rest;
+          // Completed days stay openable (to review the summary) even when "locked".
+          const locked = !restTile && !isUnlocked(d.day) && rawStatus !== "done";
+          const disabled = restTile || locked;
           return (
             <motion.button
               key={d.day}
@@ -201,12 +202,12 @@ export default function Dashboard() {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.04 * idx, duration: 0.3 }}
-              whileTap={restTile ? {} : { scale: 0.98 }}
-              onClick={() => !restTile && onOpenDay(d.day)}
-              disabled={restTile}
+              whileTap={disabled ? {} : { scale: 0.98 }}
+              onClick={() => !disabled && onOpenDay(d.day)}
+              disabled={disabled}
               className={`text-left w-full bg-slate-900 border rounded-2xl p-5 flex items-center justify-between min-h-[88px] transition-colors ${
                 isToday ? "border-indigo-500/40" : "border-slate-800"
-              } ${restTile ? "opacity-70" : "active:bg-slate-800"}`}
+              } ${disabled ? "opacity-60" : "active:bg-slate-800"}`}
             >
               <div className="flex items-center gap-4">
                 <div className="w-12 text-center">
@@ -218,13 +219,13 @@ export default function Dashboard() {
                 <div>
                   <p className="font-display text-2xl text-white uppercase tracking-tight leading-none" data-testid={`day-category-${d.label.toLowerCase()}`}>{title}</p>
                   <p className="text-slate-500 text-xs font-body mt-1 flex items-center gap-1.5">
-                    {restTile ? <><Moon className="w-3 h-3" /> Recover</> : `${cardCount} exercises`}
+                    {restTile ? <><Moon className="w-3 h-3" /> Recover</> : locked ? <><Lock className="w-3 h-3" /> Opens on its day</> : `${cardCount} exercises`}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
                 {!restTile && badgeStatus && <StatusBadge status={badgeStatus} testId={`day-status-${d.label.toLowerCase()}`} />}
-                {!restTile && <ChevronRight className="w-4 h-4 text-slate-600" />}
+                {!restTile && (locked ? <Lock className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-600" />)}
               </div>
             </motion.button>
           );

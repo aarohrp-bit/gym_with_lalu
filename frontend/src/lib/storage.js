@@ -4,20 +4,53 @@ const KEY = "gym_lalu_v1";
 
 import { generateWeek } from "@/lib/weekgen";
 
-const empty = () => ({ profiles: [], progress: {}, workouts: {}, counts: {}, lastCompletionAt: {}, weeks: {}, defaultProfileId: null });
+const empty = () => ({ profiles: [], progress: {}, workouts: {}, counts: {}, lastCompletionAt: {}, weeks: {}, defaultProfileId: null, settings: {}, lockouts: {} });
 
 // Per-day workout target — day is "done" at exactly this many A-card completions.
 export const POINTS_TARGET = 5;
 
-// Five-minute completion guard (between every A swipe and every B Finish).
-export const GUARD_SECONDS_REAL = 5 * 60;
+// Max profiles allowed on a device.
+export const MAX_PROFILES = 3;
+
+// Adjustable settings (stored globally on the device) with sane defaults.
+export const DEFAULT_SETTINGS = {
+  guardSeconds: 5 * 60,    // recovery cooldown between completions
+  circuitSeconds: 10 * 60, // Type-B circuit timer
+  theme: "dark",           // "dark" | "light"
+};
 export const GUARD_SECONDS_FAST = 5;
+
+export const getSettings = () => {
+  const s = load().settings || {};
+  return { ...DEFAULT_SETTINGS, ...s };
+};
+export const setSettings = (partial) => {
+  const data = load();
+  data.settings = { ...DEFAULT_SETTINGS, ...(data.settings || {}), ...partial };
+  save(data);
+  return data.settings;
+};
+
+// Recovery-lock duration. Dev override (?fastGuard=1) still wins for testing.
 export const getGuardSeconds = () => {
-  if (typeof window === "undefined") return GUARD_SECONDS_REAL;
-  const fast =
-    window.sessionStorage?.getItem("fastGuard") === "1" ||
-    window.location.search.includes("fastGuard=1");
-  return fast ? GUARD_SECONDS_FAST : GUARD_SECONDS_REAL;
+  if (typeof window !== "undefined") {
+    const fast =
+      window.sessionStorage?.getItem("fastGuard") === "1" ||
+      window.location.search.includes("fastGuard=1");
+    if (fast) return GUARD_SECONDS_FAST;
+  }
+  return getSettings().guardSeconds;
+};
+
+// Type-B circuit duration (seconds). Dev override (?fastTimer=1) → 3s.
+export const getCircuitSeconds = () => {
+  if (typeof window !== "undefined") {
+    const fast =
+      window.sessionStorage?.getItem("fastTimer") === "1" ||
+      window.location.search.includes("fastTimer=1");
+    if (fast) return 3;
+  }
+  return getSettings().circuitSeconds;
 };
 
 export const load = () => {
@@ -32,6 +65,8 @@ export const load = () => {
     parsed.counts ||= {};
     parsed.lastCompletionAt ||= {};
     parsed.weeks ||= {};
+    parsed.settings ||= {};
+    parsed.lockouts ||= {};
     if (!("defaultProfileId" in parsed)) parsed.defaultProfileId = null;
     return parsed;
   } catch {
@@ -45,6 +80,9 @@ export const save = (data) => {
 
 export const addProfile = (name, pin) => {
   const data = load();
+  if (data.profiles.length >= MAX_PROFILES) {
+    throw new Error(`Profile limit reached (max ${MAX_PROFILES}).`);
+  }
   const profile = {
     id: `p_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
     name: name.trim(),
@@ -240,6 +278,40 @@ export const toggleDefaultProfile = (profileId) => {
   data.defaultProfileId = data.defaultProfileId === profileId ? null : profileId;
   save(data);
   return data.defaultProfileId;
+};
+
+// Permanently delete a profile and ALL of its data.
+export const deleteProfile = (profileId) => {
+  const data = load();
+  data.profiles = data.profiles.filter((p) => p.id !== profileId);
+  delete data.progress[profileId];
+  delete data.workouts[profileId];
+  delete data.counts[profileId];
+  delete data.lastCompletionAt[profileId];
+  delete data.weeks[profileId];
+  delete data.lockouts[profileId];
+  if (data.defaultProfileId === profileId) data.defaultProfileId = null;
+  save(data);
+};
+
+// ── Lockouts (anti-intruder) ──────────────────────────────────────────────────
+// After repeated wrong PINs (login or delete), a profile is locked for a cooldown.
+export const getLockoutUntil = (profileId) => {
+  const data = load();
+  const until = data.lockouts?.[profileId] || 0;
+  return until > Date.now() ? until : 0;
+};
+export const lockProfile = (profileId, seconds) => {
+  const data = load();
+  data.lockouts ||= {};
+  data.lockouts[profileId] = Date.now() + (seconds || getSettings().guardSeconds) * 1000;
+  save(data);
+  return data.lockouts[profileId];
+};
+export const clearLockout = (profileId) => {
+  const data = load();
+  if (data.lockouts) delete data.lockouts[profileId];
+  save(data);
 };
 
 // Active profile session helpers (sessionStorage so refresh remembers, but new tab = relock)

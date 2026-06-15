@@ -7,6 +7,7 @@ import Dashboard from "@/pages/Dashboard";
 import DayDetail from "@/pages/DayDetail";
 import Workout from "@/pages/Workout";
 import Summary from "@/pages/Summary";
+import Settings from "@/pages/Settings";
 
 // Router basename so routes resolve under the GitHub Pages subpath (/gym_with_lalu)
 // while staying "/" for local dev (CRA sets PUBLIC_URL="" in development).
@@ -42,6 +43,7 @@ function App() {
           <Route path="/day/:day" element={<DayDetail />} />
           <Route path="/workout/:day" element={<Workout />} />
           <Route path="/summary/:day" element={<Summary />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

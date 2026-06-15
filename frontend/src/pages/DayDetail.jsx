@@ -1,11 +1,11 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Play, CheckCircle2, Sparkles, AlertTriangle } from "lucide-react";
+import { ChevronLeft, Play, CheckCircle2, Sparkles, AlertTriangle, Lock } from "lucide-react";
 import { DAY_META, EXERCISES, categoryTitle } from "@/data/exercises";
 import { CATEGORY_BLURBS } from "@/data/categoryBlurbs";
 import { getActive, getWorkout, resetWorkout, ensureWeek } from "@/lib/storage";
-import { mondayKey } from "@/lib/week";
+import { mondayKey, todayDayNum } from "@/lib/week";
 import { categoryForDay } from "@/lib/weekgen";
 import StatusBadge from "@/components/StatusBadge";
 
@@ -27,6 +27,8 @@ export default function DayDetail() {
   const aCount = exercises.length;
   const completedCount = workout?.completions?.length || 0;
   const status = workout?.dayCompleted ? "done" : "pending";
+  const today = todayDayNum();
+  const unlocked = !!week?.seed || today === 7 || dayNum === today;
 
   if (!meta) {
     navigate("/dashboard");
@@ -38,7 +40,7 @@ export default function DayDetail() {
   const onEnter = () => {
     if (workout?.dayCompleted) {
       navigate(`/summary/${dayNum}`);
-    } else {
+    } else if (unlocked) {
       navigate(`/workout/${dayNum}`);
     }
   };
@@ -123,15 +125,25 @@ export default function DayDetail() {
                 Restart this day
               </motion.button>
             )}
-            <motion.button
-              whileTap={{ scale: 0.97 }}
-              data-testid="enter-workout-button"
-              onClick={onEnter}
-              className="w-full bg-white text-slate-950 rounded-2xl py-4 font-body font-semibold flex items-center justify-center gap-2 min-h-[56px]"
-            >
-              <Play className="w-4 h-4 fill-current" strokeWidth={2} />
-              {workout?.dayCompleted ? "View summary" : completedCount > 0 ? "Continue workout" : "Enter workout"}
-            </motion.button>
+            {!workout?.dayCompleted && !unlocked ? (
+              <div
+                data-testid="enter-workout-locked"
+                className="w-full bg-slate-900 border border-slate-800 text-slate-400 rounded-2xl py-4 font-body font-medium flex items-center justify-center gap-2 min-h-[56px]"
+              >
+                <Lock className="w-4 h-4" strokeWidth={1.75} />
+                Opens on {meta.label} · do today's workout
+              </div>
+            ) : (
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                data-testid="enter-workout-button"
+                onClick={onEnter}
+                className="w-full bg-white text-slate-950 rounded-2xl py-4 font-body font-semibold flex items-center justify-center gap-2 min-h-[56px]"
+              >
+                <Play className="w-4 h-4 fill-current" strokeWidth={2} />
+                {workout?.dayCompleted ? "View summary" : completedCount > 0 ? "Continue workout" : "Enter workout"}
+              </motion.button>
+            )}
           </div>
         </div>
       )}

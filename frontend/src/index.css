@@ -46,6 +46,28 @@ input, textarea {
 /* Subtle scrollbar for desktop preview, hidden on mobile */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-thumb { background: #1E293B; border-radius: 3px; }
+
+/* ── Light theme ──────────────────────────────────────────────────────────────
+   The app is dark by default; toggling adds .theme-light to <html> and remaps the
+   slate palette so components stay untouched. Indigo/emerald/amber accents stay. */
+html.theme-light, html.theme-light body, html.theme-light #root { background: #f1f5f9 !important; }
+html.theme-light body { color: #0f172a; }
+.theme-light .bg-slate-950 { background-color: #e2e8f0 !important; }
+.theme-light .bg-slate-900 { background-color: #ffffff !important; }
+.theme-light .bg-slate-800 { background-color: #e2e8f0 !important; }
+.theme-light .bg-slate-700 { background-color: #cbd5e1 !important; }
+.theme-light .border-slate-900 { border-color: #e2e8f0 !important; }
+.theme-light .border-slate-800 { border-color: #e2e8f0 !important; }
+.theme-light .border-slate-700 { border-color: #cbd5e1 !important; }
+.theme-light .text-white { color: #0f172a !important; }
+.theme-light .text-slate-200 { color: #1e293b !important; }
+.theme-light .text-slate-300 { color: #334155 !important; }
+.theme-light .text-slate-400 { color: #475569 !important; }
+.theme-light .text-slate-500 { color: #64748b !important; }
+.theme-light .text-slate-600 { color: #94a3b8 !important; }
+/* Primary white buttons → indigo so they stay visible on a light background. */
+.theme-light .bg-white { background-color: #4f46e5 !important; }
+.theme-light .text-slate-950 { color: #ffffff !important; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 button, [role="button"] { -webkit-tap-highlight-color: transparent; }

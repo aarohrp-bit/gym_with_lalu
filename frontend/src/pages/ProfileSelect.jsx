@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Plus, User, UserCircle2, Dumbbell, ChevronRight, Star } from "lucide-react";
-import { load, setActive, toggleDefaultProfile } from "@/lib/storage";
+import { load, setActive, toggleDefaultProfile, MAX_PROFILES } from "@/lib/storage";
 
 export default function ProfileSelect() {
   const navigate = useNavigate();
@@ -108,15 +108,21 @@ export default function ProfileSelect() {
           <div className="text-center py-6 text-slate-500 text-sm font-body">No profiles yet. Add one below.</div>
         )}
 
-        <motion.button
-          data-testid="add-profile-button"
-          whileTap={{ scale: 0.97 }}
-          onClick={onAdd}
-          className="w-full bg-transparent border border-dashed border-slate-700 rounded-2xl p-5 flex items-center justify-center gap-2 text-slate-400 active:bg-slate-900 min-h-[64px] mt-2"
-        >
-          <Plus className="w-5 h-5" strokeWidth={1.75} />
-          <span className="font-body font-medium">Add profile</span>
-        </motion.button>
+        {profiles.length < MAX_PROFILES ? (
+          <motion.button
+            data-testid="add-profile-button"
+            whileTap={{ scale: 0.97 }}
+            onClick={onAdd}
+            className="w-full bg-transparent border border-dashed border-slate-700 rounded-2xl p-5 flex items-center justify-center gap-2 text-slate-400 active:bg-slate-900 min-h-[64px] mt-2"
+          >
+            <Plus className="w-5 h-5" strokeWidth={1.75} />
+            <span className="font-body font-medium">Add profile</span>
+          </motion.button>
+        ) : (
+          <p className="text-center text-[11px] text-slate-600 font-body mt-3" data-testid="profile-limit-note">
+            Profile limit reached ({MAX_PROFILES}). Delete one in Settings to add another.
+          </p>
+        )}
 
         <motion.button
           data-testid="guest-button"

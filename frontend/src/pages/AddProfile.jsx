@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ChevronLeft, Delete } from "lucide-react";
-import { addProfile, setActive } from "@/lib/storage";
+import { addProfile, setActive, load, MAX_PROFILES } from "@/lib/storage";
 
 const PAD_KEYS = ["1","2","3","4","5","6","7","8","9","","0","del"];
 
@@ -11,6 +11,11 @@ export default function AddProfile() {
   const [step, setStep] = useState("name"); // name | pin
   const [name, setName] = useState("");
   const [pin, setPin] = useState("");
+
+  // Enforce the device profile cap (also guards direct navigation here).
+  useEffect(() => {
+    if ((load().profiles || []).length >= MAX_PROFILES) navigate("/");
+  }, [navigate]);
 
   const onNameContinue = () => {
     if (name.trim().length < 1) return;
@@ -24,9 +29,13 @@ export default function AddProfile() {
     const next = pin + k;
     setPin(next);
     if (next.length === 4) {
-      const profile = addProfile(name, next);
-      setActive(profile.id, false);
-      setTimeout(() => navigate("/dashboard"), 200);
+      try {
+        const profile = addProfile(name, next);
+        setActive(profile.id, false);
+        setTimeout(() => navigate("/dashboard"), 200);
+      } catch {
+        navigate("/");
+      }
     }
   };
 

@@ -3,8 +3,8 @@ import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, RotateCw, ArrowRight, ChevronUp, ChevronDown, Zap, Play, Lock } from "lucide-react";
 import { DAY_META, EXERCISES, categoryTitle } from "@/data/exercises";
-import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds, ensureWeek } from "@/lib/storage";
-import { mondayKey } from "@/lib/week";
+import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds, getCircuitSeconds, ensureWeek } from "@/lib/storage";
+import { mondayKey, todayDayNum } from "@/lib/week";
 import { categoryForDay } from "@/lib/weekgen";
 import CircuitRunner from "@/components/CircuitRunner";
 
@@ -19,6 +19,9 @@ export default function Workout() {
   const week = useMemo(() => (pid && meta && !meta.rest ? ensureWeek(pid, weekStart) : null), [pid, meta, weekStart]);
   const catId = categoryForDay(week, dayNum);
   const title = meta && !meta.rest ? categoryTitle(catId) : (meta?.title || "");
+  const today = todayDayNum();
+  const dayUnlocked = !!week?.seed || today === 7 || dayNum === today;
+  const circuitMin = Math.round(getCircuitSeconds() / 60);
 
   const [completedIds, setCompletedIds] = useState(() => {
     if (!pid) return new Set();
@@ -80,8 +83,8 @@ export default function Workout() {
 
   useEffect(() => {
     if (!active) navigate("/");
-    else if (!meta || meta.rest) navigate("/dashboard");
-  }, [active, meta, navigate]);
+    else if (!meta || meta.rest || !dayUnlocked) navigate("/dashboard");
+  }, [active, meta, dayUnlocked, navigate]);
 
   // Auto-route to summary at POINTS_TARGET points (handles A and B completions alike).
   useEffect(() => {
@@ -284,7 +287,7 @@ export default function Workout() {
                     <h2 className="font-display text-3xl text-white font-bold tracking-tight leading-tight mb-1" data-testid="circuit-card-name">
                       {current.circuit?.name || current.name}
                     </h2>
-                    <p className="text-slate-400 text-xs font-body mb-4">10-minute timed sub-stack · {current.circuit?.miniExercises?.length || 6} exercises</p>
+                    <p className="text-slate-400 text-xs font-body mb-4">{circuitMin}-minute timed sub-stack · {current.circuit?.miniExercises?.length || 6} exercises</p>
                     <div className="flex-1 overflow-y-auto">
                       <div className="flex flex-col gap-1.5" data-testid="circuit-mini-list">
                         {(current.circuit?.miniExercises || []).map((m, i) => (
@@ -330,7 +333,7 @@ export default function Workout() {
                             alt={current.name}
                             draggable={false}
                             data-testid="card-image"
-                            className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+                            className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
                             onError={(e) => { e.currentTarget.style.display = "none"; }}
                           />
                         ) : (
