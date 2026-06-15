@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Timer, Zap, Sun, Moon, LogOut, Trash2, AlertTriangle, Delete } from "lucide-react";
+import { ChevronLeft, Timer, Zap, Sun, Moon, LogOut, Trash2, AlertTriangle, Delete, Download, Upload, BarChart3, BookOpen } from "lucide-react";
 import {
   getSettings, setSettings, getActive, clearActive, getProfile,
   verifyPin, deleteProfile, lockProfile, getGuardSeconds,
+  exportProfile, importProfile,
 } from "@/lib/storage";
 import { applyTheme } from "@/lib/theme";
 
@@ -22,6 +23,8 @@ export default function Settings() {
   const [pin, setPin] = useState("");
   const [attempts, setAttempts] = useState(0);
   const [error, setError] = useState("");
+  const [dataMsg, setDataMsg] = useState(null); // { ok, text }
+  const fileRef = useRef(null);
 
   useEffect(() => { if (!active) navigate("/"); }, [active, navigate]);
   if (!active) return null;
@@ -36,6 +39,38 @@ export default function Settings() {
     try { sessionStorage.setItem("gym_lalu_skip_auto", "1"); } catch { /* ignore */ }
     clearActive();
     navigate("/");
+  };
+
+  const onExport = () => {
+    const payload = exportProfile(pid);
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const safe = (profile?.name || "guest").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+    a.href = url;
+    a.download = `gym-with-lalu-${safe}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    setDataMsg({ ok: true, text: "Backup downloaded." });
+  };
+
+  const onImportFile = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const p = importProfile(JSON.parse(reader.result));
+        setDataMsg({ ok: true, text: `Imported "${p.name}". Find it on the profile screen.` });
+        setTimeout(() => navigate("/"), 1300);
+      } catch (err) {
+        setDataMsg({ ok: false, text: err.message || "Import failed." });
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
   };
 
   const onPinKey = (k) => {
@@ -136,6 +171,50 @@ export default function Settings() {
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Stats + replay tutorial */}
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        <button
+          data-testid="stats-button"
+          onClick={() => navigate("/stats")}
+          className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 font-body text-sm active:bg-slate-800 min-h-[48px]"
+        >
+          <BarChart3 className="w-4 h-4" strokeWidth={1.75} /> Stats
+        </button>
+        <button
+          data-testid="replay-tutorial-button"
+          onClick={() => navigate("/tutorial")}
+          className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 font-body text-sm active:bg-slate-800 min-h-[48px]"
+        >
+          <BookOpen className="w-4 h-4" strokeWidth={1.75} /> How it works
+        </button>
+      </div>
+
+      {/* Data — export / import (backup, move to a new phone) */}
+      <div className="mb-4 p-5 rounded-2xl bg-slate-900 border border-slate-800">
+        <p className="font-display text-xl text-white tracking-tight mb-1">Your data</p>
+        <p className="text-slate-400 text-xs font-body mb-3">Everything stays on this phone. Back it up or move it to another device.</p>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            data-testid="export-button"
+            onClick={onExport}
+            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-sm active:bg-slate-700 min-h-[48px]"
+          >
+            <Download className="w-4 h-4" strokeWidth={1.75} /> Export
+          </button>
+          <button
+            data-testid="import-button"
+            onClick={() => fileRef.current?.click()}
+            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-sm active:bg-slate-700 min-h-[48px]"
+          >
+            <Upload className="w-4 h-4" strokeWidth={1.75} /> Import
+          </button>
+        </div>
+        <input ref={fileRef} type="file" accept="application/json,.json" onChange={onImportFile} className="hidden" data-testid="import-file" />
+        {dataMsg && (
+          <p className={`text-xs font-body mt-3 ${dataMsg.ok ? "text-emerald-400" : "text-rose-400"}`} data-testid="data-message">{dataMsg.text}</p>
+        )}
       </div>
 
       {/* Danger zone — delete profile (not for guest) */}

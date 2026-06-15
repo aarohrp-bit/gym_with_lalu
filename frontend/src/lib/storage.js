@@ -4,7 +4,7 @@ const KEY = "gym_lalu_v1";
 
 import { generateWeek } from "@/lib/weekgen";
 
-const empty = () => ({ profiles: [], progress: {}, workouts: {}, counts: {}, lastCompletionAt: {}, weeks: {}, defaultProfileId: null, settings: {}, lockouts: {} });
+const empty = () => ({ profiles: [], progress: {}, workouts: {}, counts: {}, lastCompletionAt: {}, weeks: {}, defaultProfileId: null, settings: {}, lockouts: {}, notes: {}, tutorialSeen: false });
 
 // Per-day workout target — day is "done" at exactly this many A-card completions.
 export const POINTS_TARGET = 5;
@@ -67,6 +67,8 @@ export const load = () => {
     parsed.weeks ||= {};
     parsed.settings ||= {};
     parsed.lockouts ||= {};
+    parsed.notes ||= {};
+    if (!("tutorialSeen" in parsed)) parsed.tutorialSeen = false;
     if (!("defaultProfileId" in parsed)) parsed.defaultProfileId = null;
     return parsed;
   } catch {
@@ -312,6 +314,83 @@ export const clearLockout = (profileId) => {
   const data = load();
   if (data.lockouts) delete data.lockouts[profileId];
   save(data);
+};
+
+// ── Per-exercise notes (e.g. "last: 12kg") ───────────────────────────────────
+export const getNote = (profileId, exerciseId) => {
+  const data = load();
+  return data.notes?.[profileId]?.[exerciseId] || "";
+};
+export const setNote = (profileId, exerciseId, value) => {
+  const data = load();
+  data.notes ||= {};
+  data.notes[profileId] ||= {};
+  const v = String(value || "").trim();
+  if (v) data.notes[profileId][exerciseId] = v;
+  else delete data.notes[profileId][exerciseId];
+  save(data);
+};
+
+// ── Onboarding tutorial flag ──────────────────────────────────────────────────
+export const hasSeenTutorial = () => !!load().tutorialSeen;
+export const markTutorialSeen = () => {
+  const data = load();
+  data.tutorialSeen = true;
+  save(data);
+};
+
+// ── Export / import a single profile (portable backup / move to new phone) ─────
+export const exportProfile = (profileId) => {
+  const data = load();
+  const profile =
+    data.profiles.find((p) => p.id === profileId) ||
+    (profileId === "guest" ? { id: "guest", name: "Guest" } : null);
+  return {
+    type: "gym-with-lalu-profile",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    profile,
+    progress: data.progress[profileId] || {},
+    workouts: data.workouts[profileId] || {},
+    counts: data.counts[profileId] || {},
+    weeks: data.weeks[profileId] || {},
+    notes: data.notes[profileId] || {},
+    lastCompletionAt: data.lastCompletionAt[profileId] || null,
+  };
+};
+
+// Returns the imported profile, or throws on invalid payload / profile-limit.
+export const importProfile = (payload) => {
+  if (!payload || payload.type !== "gym-with-lalu-profile" || !payload.profile) {
+    throw new Error("Not a valid Gym with Lalu backup file.");
+  }
+  const data = load();
+  let prof = { ...payload.profile };
+  // Guest exports (or id-less) become a fresh profile so they can be PIN-protected.
+  if (!prof.id || prof.id === "guest") {
+    prof.id = `p_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    if (!prof.pin) prof.pin = "0000";
+  }
+  const existing = data.profiles.findIndex((p) => p.id === prof.id);
+  if (existing === -1) {
+    if (data.profiles.length >= MAX_PROFILES) {
+      throw new Error(`Profile limit reached (max ${MAX_PROFILES}). Delete one first.`);
+    }
+    if (!prof.pin) prof.pin = "0000";
+    if (!prof.name) prof.name = "Imported";
+    if (!prof.createdAt) prof.createdAt = new Date().toISOString();
+    data.profiles.push(prof);
+  } else {
+    data.profiles[existing] = { ...data.profiles[existing], ...prof };
+  }
+  data.progress[prof.id] = payload.progress || {};
+  data.workouts[prof.id] = payload.workouts || {};
+  data.counts[prof.id] = payload.counts || {};
+  data.weeks[prof.id] = payload.weeks || {};
+  data.notes[prof.id] = payload.notes || {};
+  if (payload.lastCompletionAt) data.lastCompletionAt[prof.id] = payload.lastCompletionAt;
+  save(data);
+  return prof;
 };
 
 // Active profile session helpers (sessionStorage so refresh remembers, but new tab = relock)

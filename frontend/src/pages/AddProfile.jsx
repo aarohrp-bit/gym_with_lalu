@@ -32,7 +32,8 @@ export default function AddProfile() {
       try {
         const profile = addProfile(name, next);
         setActive(profile.id, false);
-        setTimeout(() => navigate("/dashboard"), 200);
+        // New profile → show the onboarding tutorial first.
+        setTimeout(() => navigate("/tutorial"), 200);
       } catch {
         navigate("/");
       }

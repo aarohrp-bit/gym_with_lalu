@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Plus, User, UserCircle2, Dumbbell, ChevronRight, Star } from "lucide-react";
-import { load, setActive, toggleDefaultProfile, MAX_PROFILES } from "@/lib/storage";
+import { load, setActive, toggleDefaultProfile, MAX_PROFILES, hasSeenTutorial } from "@/lib/storage";
 
 export default function ProfileSelect() {
   const navigate = useNavigate();
@@ -30,7 +30,8 @@ export default function ProfileSelect() {
   const onPickProfile = (p) => navigate(`/pin/${p.id}`);
   const onGuest = () => {
     setActive("guest", true);
-    navigate("/dashboard");
+    // First-time guests see the tutorial; afterwards go straight in.
+    navigate(hasSeenTutorial() ? "/dashboard" : "/tutorial");
   };
   const onAdd = () => navigate("/add-profile");
   const onToggleDefault = (e, p) => {

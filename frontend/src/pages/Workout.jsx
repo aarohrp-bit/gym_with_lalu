@@ -7,6 +7,7 @@ import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLast
 import { mondayKey, todayDayNum } from "@/lib/week";
 import { categoryForDay } from "@/lib/weekgen";
 import CircuitRunner from "@/components/CircuitRunner";
+import NoteField from "@/components/NoteField";
 
 export default function Workout() {
   const { day } = useParams();
@@ -371,6 +372,7 @@ export default function Workout() {
                         <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-300/80 font-body mb-2">What it does</p>
                         <p className="font-body text-slate-300 text-sm leading-relaxed">{current.whatItDoes}</p>
                       </div>
+                      <NoteField pid={pid} exId={current.id} />
                       <p className="text-slate-500 text-xs font-body mt-auto uppercase tracking-wider pt-4">
                         Double-tap to flip back
                       </p>
