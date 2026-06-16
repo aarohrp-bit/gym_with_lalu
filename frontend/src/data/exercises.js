@@ -3,9 +3,15 @@
 // Each B card: { id, day, name, type: "B", circuit: { name, miniExercises: [{ name, imageKey, img, howTo, whatItDoes }] } }
 // Day 2 (Chest) and Day 6 (Biceps) each contain ONE circuit card (type "B").
 
-// Resolve an exercise image key to its public URL. Images live in /public/exercises/<key>.webp
-export const imgUrl = (key) =>
-  key ? `${process.env.PUBLIC_URL || ""}/exercises/${key}.webp` : null;
+// Resolve an exercise image key to its public URL. Images live in /public/exercises/.
+// A key with an explicit image extension is used as-is; otherwise ".webp" is assumed.
+export const imgUrl = (key) => {
+  if (!key) return null;
+  const base = process.env.PUBLIC_URL || "";
+  return /\.(webp|jpe?g|png)$/i.test(key)
+    ? `${base}/exercises/${key}`
+    : `${base}/exercises/${key}.webp`;
+};
 
 // All image keys actually used by the app — handy for service-worker precaching.
 export const ALL_IMAGE_KEYS = [];
@@ -144,7 +150,7 @@ export const EXERCISES = {
     a(3, "Seated Single-Arm Overhead Dumbbell Tricep Extension", "r01yrl",
       "Sit upright. Lower one dumbbell behind your head with one arm, then extend straight up.",
       "Isolates the long head of the tricep unilaterally."),
-    a(3, "Seated Overhead Dumbbell Tricep Extension", "yzsm4o",
+    a(3, "Seated Overhead Dumbbell Tricep Extension", "yzsm4o.jpg",
       "Sit upright holding one heavy dumbbell with both hands. Lower it behind the neck and press up.",
       "Allows for heavier weight to build overall tricep mass."),
     a(3, "Bench Dips", "f1oxlu",
