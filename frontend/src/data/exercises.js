@@ -150,7 +150,7 @@ export const EXERCISES = {
     a(3, "Seated Single-Arm Overhead Dumbbell Tricep Extension", "r01yrl",
       "Sit upright. Lower one dumbbell behind your head with one arm, then extend straight up.",
       "Isolates the long head of the tricep unilaterally."),
-    a(3, "Seated Overhead Dumbbell Tricep Extension", "yzsm4o.jpg",
+    a(3, "Seated Overhead Dumbbell Tricep Extension", "yzsm4o",
       "Sit upright holding one heavy dumbbell with both hands. Lower it behind the neck and press up.",
       "Allows for heavier weight to build overall tricep mass."),
     a(3, "Bench Dips", "f1oxlu",
