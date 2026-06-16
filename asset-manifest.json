@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/gym_with_lalu/static/css/main.3e8afe8e.css",
-    "main.js": "/gym_with_lalu/static/js/main.859aa772.js",
+    "main.css": "/gym_with_lalu/static/css/main.2c62e1fd.css",
+    "main.js": "/gym_with_lalu/static/js/main.772a6e39.js",
     "index.html": "/gym_with_lalu/index.html",
-    "main.3e8afe8e.css.map": "/gym_with_lalu/static/css/main.3e8afe8e.css.map",
-    "main.859aa772.js.map": "/gym_with_lalu/static/js/main.859aa772.js.map"
+    "main.2c62e1fd.css.map": "/gym_with_lalu/static/css/main.2c62e1fd.css.map",
+    "main.772a6e39.js.map": "/gym_with_lalu/static/js/main.772a6e39.js.map"
   },
   "entrypoints": [
-    "static/css/main.3e8afe8e.css",
-    "static/js/main.859aa772.js"
+    "static/css/main.2c62e1fd.css",
+    "static/js/main.772a6e39.js"
   ]
 }
