@@ -1,5 +1,5 @@
 /* Gym with Lalu — App Shell + Image Service Worker */
-const CACHE_NAME = "gym-with-lalu-v4";
+const CACHE_NAME = "gym-with-lalu-v5";
 
 // Paths are RELATIVE so they resolve correctly whether the app is served from "/"
 // (local dev) or from a subpath like "/gym_with_lalu/" (GitHub Pages). Relative URLs
