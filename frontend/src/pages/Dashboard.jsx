@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Settings, Moon, Dumbbell, Sprout, RotateCcw, X, AlertTriangle, Lock } from "lucide-react";
+import { ChevronRight, Settings, Moon, Dumbbell, Sprout, RotateCcw, X, AlertTriangle, Lock, Plus } from "lucide-react";
 import {
   getActive, getWeekProgress, getProfile,
-  ensureWeek, applySeed, startNewWeek,
+  ensureWeek, applySeed, startNewWeek, getDisplayCount, getCustomCardsForCategory,
 } from "@/lib/storage";
 import { mondayKey, todayDayNum } from "@/lib/week";
 import { categoryForDay } from "@/lib/weekgen";
@@ -78,6 +78,8 @@ export default function Dashboard() {
   // or today is the Sunday rest day (then you may catch up on any day).
   const allDaysOpen = seedActive || today === 7;
   const isUnlocked = (dayNum) => allDaysOpen || dayNum === today;
+  const pid = pidOf(active);
+  const displayCount = getDisplayCount();
 
   return (
     <div className="w-full max-w-md mx-auto px-6 pt-10 pb-24 min-h-screen">
@@ -91,14 +93,24 @@ export default function Dashboard() {
             This week
           </h1>
         </div>
-        <button
-          data-testid="settings-button"
-          onClick={() => navigate("/settings")}
-          className="w-11 h-11 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center active:bg-slate-800"
-          aria-label="Settings"
-        >
-          <Settings className="w-4 h-4 text-slate-400" strokeWidth={1.75} />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            data-testid="create-card-button"
+            onClick={() => navigate("/create-card")}
+            className="w-11 h-11 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center active:bg-slate-800"
+            aria-label="Create custom card"
+          >
+            <Plus className="w-5 h-5 text-slate-400" strokeWidth={1.75} />
+          </button>
+          <button
+            data-testid="settings-button"
+            onClick={() => navigate("/settings")}
+            className="w-11 h-11 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center active:bg-slate-800"
+            aria-label="Settings"
+          >
+            <Settings className="w-4 h-4 text-slate-400" strokeWidth={1.75} />
+          </button>
+        </div>
       </div>
 
       {/* Progress summary */}
@@ -190,7 +202,8 @@ export default function Dashboard() {
           else if (d.day < today) badgeStatus = "skipped";
           const catId = categoryForDay(week, d.day);
           const title = d.rest ? "Rest" : categoryTitle(catId);
-          const cardCount = d.rest ? 0 : (EXERCISES[catId]?.length || 0);
+          const poolSize = d.rest ? 0 : ((EXERCISES[catId]?.length || 0) + getCustomCardsForCategory(pid, catId).length);
+          const cardCount = Math.min(poolSize, displayCount);
           const restTile = d.rest;
           // Completed days stay openable (to review the summary) even when "locked".
           const locked = !restTile && !isUnlocked(d.day) && rawStatus !== "done";

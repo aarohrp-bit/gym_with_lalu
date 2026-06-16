@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, Play, CheckCircle2, Sparkles, AlertTriangle, Lock } from "lucide-react";
 import { DAY_META, EXERCISES, categoryTitle } from "@/data/exercises";
 import { CATEGORY_BLURBS } from "@/data/categoryBlurbs";
-import { getActive, getWorkout, resetWorkout, ensureWeek } from "@/lib/storage";
+import { getActive, getWorkout, resetWorkout, ensureWeek, getPointsTarget, getDisplayCount, getCustomCardsForCategory } from "@/lib/storage";
 import { mondayKey, todayDayNum } from "@/lib/week";
 import { categoryForDay } from "@/lib/weekgen";
 import StatusBadge from "@/components/StatusBadge";
@@ -23,8 +23,9 @@ export default function DayDetail() {
   const title = meta && !meta.rest ? categoryTitle(catId) : (meta?.title || "");
   const blurb = meta ? CATEGORY_BLURBS[meta.rest ? "Rest" : title] : null;
   const workout = pid ? getWorkout(pid, weekStart, dayNum) : null;
-  const exercises = EXERCISES[catId] || [];
-  const aCount = exercises.length;
+  const pointsTarget = getPointsTarget();
+  const poolSize = (EXERCISES[catId] || []).length + (pid && !meta?.rest ? getCustomCardsForCategory(pid, catId).length : 0);
+  const aCount = Math.min(poolSize, getDisplayCount());
   const completedCount = workout?.completions?.length || 0;
   const status = workout?.dayCompleted ? "done" : "pending";
   const today = todayDayNum();
@@ -99,7 +100,7 @@ export default function DayDetail() {
             <div>
               <p className="text-[11px] uppercase tracking-[0.18em] text-slate-500 font-body">Today</p>
               <p className="font-display text-3xl font-bold text-white tracking-tight" data-testid="day-points">
-                {completedCount} / 5 done
+                {completedCount} / {pointsTarget} done
               </p>
               <p className="text-slate-500 text-xs font-body mt-0.5">{aCount} exercises available</p>
             </div>

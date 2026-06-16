@@ -5,7 +5,7 @@ import { ChevronLeft, Timer, Zap, Sun, Moon, LogOut, Trash2, AlertTriangle, Dele
 import {
   getSettings, setSettings, getActive, clearActive, getProfile,
   verifyPin, deleteProfile, lockProfile, getGuardSeconds,
-  exportProfile, importProfile,
+  exportProfile, importProfile, exportCards, importCards, LIMIT_MAX,
 } from "@/lib/storage";
 import { applyTheme } from "@/lib/theme";
 
@@ -41,30 +41,50 @@ export default function Settings() {
     navigate("/");
   };
 
-  const onExport = () => {
-    const payload = exportProfile(pid);
+  const download = (payload, suffix) => {
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     const safe = (profile?.name || "guest").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
     a.href = url;
-    a.download = `gym-with-lalu-${safe}.json`;
+    a.download = `gym-with-lalu-${safe}-${suffix}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
-    setDataMsg({ ok: true, text: "Backup downloaded." });
   };
 
+  const onExportProfile = () => {
+    download(exportProfile(pid), "profile");
+    setDataMsg({ ok: true, text: "Full profile backup downloaded." });
+  };
+
+  const onExportCards = () => {
+    const payload = exportCards(pid);
+    if (!payload.cards.length) {
+      setDataMsg({ ok: false, text: "No custom cards to export yet. Make one with the + button." });
+      return;
+    }
+    download(payload, "cards");
+    setDataMsg({ ok: true, text: `Exported ${payload.cards.length} card(s) to share.` });
+  };
+
+  // Import auto-detects a full profile vs a shared-cards file.
   const onImportFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
       try {
-        const p = importProfile(JSON.parse(reader.result));
-        setDataMsg({ ok: true, text: `Imported "${p.name}". Find it on the profile screen.` });
-        setTimeout(() => navigate("/"), 1300);
+        const obj = JSON.parse(reader.result);
+        if (obj?.type === "gym-with-lalu-cards") {
+          const n = importCards(obj, pid);
+          setDataMsg({ ok: true, text: `Added ${n} card(s) to your stack.` });
+        } else {
+          const p = importProfile(obj);
+          setDataMsg({ ok: true, text: `Imported "${p.name}". Find it on the profile screen.` });
+          setTimeout(() => navigate("/"), 1300);
+        }
       } catch (err) {
         setDataMsg({ ok: false, text: err.message || "Import failed." });
       }
@@ -149,6 +169,35 @@ export default function Settings() {
         <div className="flex justify-between text-[10px] text-slate-600 font-body mt-1"><span>1 min</span><span>20 min</span></div>
       </div>
 
+      {/* Workout limits */}
+      <div className="mb-4 p-5 rounded-2xl bg-slate-900 border border-slate-800">
+        <p className="font-display text-xl text-white tracking-tight mb-1">Workout size</p>
+        <p className="text-slate-400 text-xs font-body mb-3">
+          Show <span className="text-white" data-testid="display-value">{settings.displayCount ?? 8}</span> cards a day · finish <span className="text-white" data-testid="target-value">{Math.min(settings.pointsTarget ?? 5, settings.displayCount ?? 8)}</span> to complete it.
+        </p>
+        <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-body mb-1">Cards shown per day</p>
+        <input
+          data-testid="display-slider"
+          type="range" min="1" max={LIMIT_MAX} step="1"
+          value={settings.displayCount ?? 8}
+          onChange={(e) => {
+            const dc = Number(e.target.value);
+            const pt = Math.min(settings.pointsTarget ?? 5, dc);
+            update({ displayCount: dc, pointsTarget: pt });
+          }}
+          className="w-full accent-indigo-400"
+        />
+        <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-body mb-1 mt-3">Points to finish a day</p>
+        <input
+          data-testid="target-slider"
+          type="range" min="1" max={settings.displayCount ?? 8} step="1"
+          value={Math.min(settings.pointsTarget ?? 5, settings.displayCount ?? 8)}
+          onChange={(e) => update({ pointsTarget: Number(e.target.value) })}
+          className="w-full accent-indigo-400"
+        />
+        <div className="flex justify-between text-[10px] text-slate-600 font-body mt-1"><span>1</span><span>max {LIMIT_MAX}</span></div>
+      </div>
+
       {/* Theme */}
       <div className="mb-4 p-5 rounded-2xl bg-slate-900 border border-slate-800">
         <p className="font-display text-xl text-white tracking-tight mb-3">Theme</p>
@@ -197,20 +246,27 @@ export default function Settings() {
         <p className="text-slate-400 text-xs font-body mb-3">Everything stays on this phone. Back it up or move it to another device.</p>
         <div className="grid grid-cols-2 gap-2">
           <button
-            data-testid="export-button"
-            onClick={onExport}
+            data-testid="export-profile-button"
+            onClick={onExportProfile}
             className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-sm active:bg-slate-700 min-h-[48px]"
           >
-            <Download className="w-4 h-4" strokeWidth={1.75} /> Export
+            <Download className="w-4 h-4" strokeWidth={1.75} /> Profile
           </button>
           <button
-            data-testid="import-button"
-            onClick={() => fileRef.current?.click()}
+            data-testid="export-cards-button"
+            onClick={onExportCards}
             className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-sm active:bg-slate-700 min-h-[48px]"
           >
-            <Upload className="w-4 h-4" strokeWidth={1.75} /> Import
+            <Download className="w-4 h-4" strokeWidth={1.75} /> Cards
           </button>
         </div>
+        <button
+          data-testid="import-button"
+          onClick={() => fileRef.current?.click()}
+          className="w-full mt-2 flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-sm active:bg-slate-700 min-h-[48px]"
+        >
+          <Upload className="w-4 h-4" strokeWidth={1.75} /> Import profile or cards
+        </button>
         <input ref={fileRef} type="file" accept="application/json,.json" onChange={onImportFile} className="hidden" data-testid="import-file" />
         {dataMsg && (
           <p className={`text-xs font-body mt-3 ${dataMsg.ok ? "text-emerald-400" : "text-rose-400"}`} data-testid="data-message">{dataMsg.text}</p>

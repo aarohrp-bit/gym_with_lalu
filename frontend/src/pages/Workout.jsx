@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, RotateCw, ArrowRight, ChevronUp, ChevronDown, Zap, Play, Lock } from "lucide-react";
 import { DAY_META, EXERCISES, categoryTitle } from "@/data/exercises";
-import { getActive, getWorkout, addCompletion, POINTS_TARGET, getCounts, getLastCompletionAt, getGuardSeconds, getCircuitSeconds, ensureWeek } from "@/lib/storage";
+import { getActive, getWorkout, addCompletion, getPointsTarget, getDisplayCount, getCustomCardsForCategory, getCounts, getLastCompletionAt, getGuardSeconds, getCircuitSeconds, ensureWeek } from "@/lib/storage";
 import { mondayKey, todayDayNum } from "@/lib/week";
 import { categoryForDay } from "@/lib/weekgen";
 import CircuitRunner from "@/components/CircuitRunner";
@@ -23,6 +23,8 @@ export default function Workout() {
   const today = todayDayNum();
   const dayUnlocked = !!week?.seed || today === 7 || dayNum === today;
   const circuitMin = Math.round(getCircuitSeconds() / 60);
+  const POINTS_TARGET = getPointsTarget();
+  const displayCount = getDisplayCount();
 
   const [completedIds, setCompletedIds] = useState(() => {
     if (!pid) return new Set();
@@ -46,19 +48,25 @@ export default function Workout() {
   const counts = useMemo(() => (pid ? getCounts(pid) : {}), [pid]);
   const allCards = useMemo(() => {
     const base = EXERCISES[catId] || [];
+    const custom = pid ? getCustomCardsForCategory(pid, catId) : [];
+    const pool = [...base, ...custom];
+    let ordered;
     if (week?.seed && week.cardOrder?.[catId]) {
       const order = week.cardOrder[catId];
-      const byId = Object.fromEntries(base.map((e) => [e.id, e]));
-      const ordered = order.map((id) => byId[id]).filter(Boolean);
-      base.forEach((e) => { if (!order.includes(e.id)) ordered.push(e); });
-      return ordered;
+      const byId = Object.fromEntries(pool.map((e) => [e.id, e]));
+      ordered = order.map((id) => byId[id]).filter(Boolean);
+      pool.forEach((e) => { if (!order.includes(e.id)) ordered.push(e); });
+    } else if (!pid || pid === "guest") {
+      ordered = pool;
+    } else {
+      ordered = pool
+        .map((e, i) => ({ e, i, c: counts[e.id] || 0 }))
+        .sort((a, b) => a.c - b.c || a.i - b.i)
+        .map((x) => x.e);
     }
-    if (!pid || pid === "guest") return base;
-    return base
-      .map((e, i) => ({ e, i, c: counts[e.id] || 0 }))
-      .sort((a, b) => a.c - b.c || a.i - b.i)
-      .map((x) => x.e);
-  }, [catId, pid, counts, week]);
+    // The day shows at most `displayCount` cards from the (possibly larger) pool.
+    return ordered.slice(0, displayCount);
+  }, [catId, pid, counts, week, displayCount]);
   const remaining = useMemo(
     () => allCards.filter((e) => !completedIds.has(e.id)),
     [allCards, completedIds]
@@ -93,7 +101,7 @@ export default function Workout() {
       const t = setTimeout(() => navigate(`/summary/${dayNum}`), 380);
       return () => clearTimeout(t);
     }
-  }, [points, dayNum, navigate]);
+  }, [points, dayNum, navigate, POINTS_TARGET]);
 
   if (!meta || meta.rest || !pid) return null;
 

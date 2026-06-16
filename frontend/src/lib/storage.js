@@ -4,7 +4,7 @@ const KEY = "gym_lalu_v1";
 
 import { generateWeek } from "@/lib/weekgen";
 
-const empty = () => ({ profiles: [], progress: {}, workouts: {}, counts: {}, lastCompletionAt: {}, weeks: {}, defaultProfileId: null, settings: {}, lockouts: {}, notes: {}, tutorialSeen: false });
+const empty = () => ({ profiles: [], progress: {}, workouts: {}, counts: {}, lastCompletionAt: {}, weeks: {}, defaultProfileId: null, settings: {}, lockouts: {}, notes: {}, customCards: {}, tutorialSeen: false });
 
 // Per-day workout target — day is "done" at exactly this many A-card completions.
 export const POINTS_TARGET = 5;
@@ -17,8 +17,23 @@ export const DEFAULT_SETTINGS = {
   guardSeconds: 5 * 60,    // recovery cooldown between completions
   circuitSeconds: 10 * 60, // Type-B circuit timer
   theme: "dark",           // "dark" | "light"
+  displayCount: 8,         // cards shown per day
+  pointsTarget: 5,         // completions needed to finish a day
 };
 export const GUARD_SECONDS_FAST = 5;
+export const LIMIT_MAX = 10;        // hard cap for display/perform counts
+export const MAX_CUSTOM_CARDS = 20; // per profile
+
+// How many cards a day shows (1..10).
+export const getDisplayCount = () => {
+  const v = Number(getSettings().displayCount) || 8;
+  return Math.max(1, Math.min(LIMIT_MAX, v));
+};
+// How many completions finish a day (1..displayCount, capped at 10).
+export const getPointsTarget = () => {
+  const v = Number(getSettings().pointsTarget) || 5;
+  return Math.max(1, Math.min(LIMIT_MAX, getDisplayCount(), v));
+};
 
 export const getSettings = () => {
   const s = load().settings || {};
@@ -68,6 +83,7 @@ export const load = () => {
     parsed.settings ||= {};
     parsed.lockouts ||= {};
     parsed.notes ||= {};
+    parsed.customCards ||= {};
     if (!("tutorialSeen" in parsed)) parsed.tutorialSeen = false;
     if (!("defaultProfileId" in parsed)) parsed.defaultProfileId = null;
     return parsed;
@@ -175,7 +191,7 @@ export const addCompletion = (profileId, weekStartIso, dayNum, exerciseId, name)
     data.counts[profileId][exerciseId] = (data.counts[profileId][exerciseId] || 0) + 1;
   }
   data.lastCompletionAt[profileId] = new Date().toISOString();
-  if (w.completions.length >= POINTS_TARGET) {
+  if (w.completions.length >= getPointsTarget()) {
     w.dayCompleted = true;
     w.finishedAt = new Date().toISOString();
     data.progress[profileId] ||= {};
@@ -355,6 +371,7 @@ export const exportProfile = (profileId) => {
     counts: data.counts[profileId] || {},
     weeks: data.weeks[profileId] || {},
     notes: data.notes[profileId] || {},
+    customCards: data.customCards[profileId] || [],
     lastCompletionAt: data.lastCompletionAt[profileId] || null,
   };
 };
@@ -388,9 +405,80 @@ export const importProfile = (payload) => {
   data.counts[prof.id] = payload.counts || {};
   data.weeks[prof.id] = payload.weeks || {};
   data.notes[prof.id] = payload.notes || {};
+  data.customCards[prof.id] = Array.isArray(payload.customCards) ? payload.customCards : [];
   if (payload.lastCompletionAt) data.lastCompletionAt[prof.id] = payload.lastCompletionAt;
   save(data);
   return prof;
+};
+
+// ── Custom cards (user-made exercises) ────────────────────────────────────────
+// customCards[profileId] = [{ id, category(1-6), name, howTo, whatItDoes, img(dataURL), createdAt }]
+export const getCustomCards = (profileId) => load().customCards?.[profileId] || [];
+
+export const getCustomCardsForCategory = (profileId, category) =>
+  getCustomCards(profileId)
+    .filter((c) => Number(c.category) === Number(category))
+    // shape them like built-in A cards for the workout pool
+    .map((c) => ({ id: c.id, day: Number(c.category), name: c.name, type: "A", img: c.img, howTo: c.howTo, whatItDoes: c.whatItDoes, custom: true }));
+
+export const addCustomCard = (profileId, card) => {
+  const data = load();
+  data.customCards[profileId] ||= [];
+  if (data.customCards[profileId].length >= MAX_CUSTOM_CARDS) {
+    throw new Error(`Custom card limit reached (max ${MAX_CUSTOM_CARDS}).`);
+  }
+  const full = {
+    id: card.id || `c_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    category: Number(card.category),
+    name: String(card.name || "").trim() || "Custom exercise",
+    howTo: String(card.howTo || "").trim(),
+    whatItDoes: String(card.whatItDoes || "").trim(),
+    img: card.img || null,
+    createdAt: card.createdAt || new Date().toISOString(),
+  };
+  data.customCards[profileId].push(full);
+  save(data);
+  return full;
+};
+
+export const deleteCustomCard = (profileId, cardId) => {
+  const data = load();
+  if (data.customCards[profileId]) {
+    data.customCards[profileId] = data.customCards[profileId].filter((c) => c.id !== cardId);
+    save(data);
+  }
+};
+
+// Export only custom cards (to share with friends). Pass specific ids or omit for all.
+export const exportCards = (profileId, ids = null) => {
+  let cards = getCustomCards(profileId);
+  if (Array.isArray(ids)) cards = cards.filter((c) => ids.includes(c.id));
+  return { type: "gym-with-lalu-cards", version: 1, exportedAt: new Date().toISOString(), cards };
+};
+
+// Import shared cards into a profile (new ids to avoid collisions). Returns count added.
+export const importCards = (payload, profileId) => {
+  if (!payload || payload.type !== "gym-with-lalu-cards" || !Array.isArray(payload.cards)) {
+    throw new Error("Not a valid Gym with Lalu cards file.");
+  }
+  const data = load();
+  data.customCards[profileId] ||= [];
+  let added = 0;
+  for (const c of payload.cards) {
+    if (data.customCards[profileId].length >= MAX_CUSTOM_CARDS) break;
+    data.customCards[profileId].push({
+      id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      category: Number(c.category) || 1,
+      name: String(c.name || "Imported exercise").trim(),
+      howTo: String(c.howTo || "").trim(),
+      whatItDoes: String(c.whatItDoes || "").trim(),
+      img: c.img || null,
+      createdAt: new Date().toISOString(),
+    });
+    added++;
+  }
+  save(data);
+  return added;
 };
 
 // Active profile session helpers (sessionStorage so refresh remembers, but new tab = relock)
