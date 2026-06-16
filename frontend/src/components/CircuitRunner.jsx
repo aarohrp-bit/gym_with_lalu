@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, RotateCw, Flag, Pause } from "lucide-react";
 import { getCircuitSeconds } from "@/lib/storage";
+import { vibrate } from "@/lib/haptics";
 
 const fmtMMSS = (s) => {
   const m = Math.floor(s / 60);
@@ -24,6 +25,11 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
     }, 1000);
     return () => clearInterval(id);
   }, []);
+
+  // Buzz when the timer hits zero (Finish unlocks).
+  useEffect(() => {
+    if (secondsLeft === 0) vibrate([60, 40, 60]);
+  }, [secondsLeft]);
 
   // Lock browser back during circuit — show confirm instead of leaving
   useEffect(() => {

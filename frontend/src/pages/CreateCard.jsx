@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ChevronLeft, ImagePlus, Trash2, Check } from "lucide-react";
-import { getActive, addCustomCard, getCustomCards, deleteCustomCard, MAX_CUSTOM_CARDS } from "@/lib/storage";
+import { ChevronLeft, ImagePlus, Trash2, Check, Share2, Pencil, X } from "lucide-react";
+import { getActive, addCustomCard, getCustomCards, deleteCustomCard, updateCustomCard, MAX_CUSTOM_CARDS } from "@/lib/storage";
 import { CATEGORIES } from "@/data/exercises";
+import { shareOrDownload } from "@/lib/share";
 
 const TARGET_AR = 9 / 16; // 0.5625 — the exercise-card aspect ratio
 const AR_TOL = 0.08;       // ±8%
@@ -22,12 +23,31 @@ export default function CreateCard() {
   const [imgErr, setImgErr] = useState("");
   const [msg, setMsg] = useState("");
   const [refresh, setRefresh] = useState(0);
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => { if (!active) navigate("/"); }, [active, navigate]);
   if (!active) return null;
 
   const cards = getCustomCards(pid);
-  const atLimit = cards.length >= MAX_CUSTOM_CARDS;
+  const atLimit = cards.length >= MAX_CUSTOM_CARDS && !editingId;
+
+  const resetForm = () => {
+    setName(""); setHowTo(""); setWhatItDoes(""); setImage(null); setCategory(1); setEditingId(null); setImgErr("");
+  };
+
+  const startEdit = (c) => {
+    setEditingId(c.id);
+    setName(c.name || ""); setHowTo(c.howTo || ""); setWhatItDoes(c.whatItDoes || "");
+    setCategory(Number(c.category) || 1); setImage(c.img || null); setImgErr(""); setMsg("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const onShareCard = (c) => {
+    shareOrDownload("gym-with-lalu-card.json", {
+      type: "gym-with-lalu-cards", version: 1, exportedAt: new Date().toISOString(),
+      cards: [{ category: c.category, name: c.name, howTo: c.howTo, whatItDoes: c.whatItDoes, img: c.img }],
+    });
+  };
 
   const onFile = (e) => {
     const file = e.target.files?.[0];
@@ -62,13 +82,18 @@ export default function CreateCard() {
   const onSave = () => {
     if (!canSave) return;
     try {
-      addCustomCard(pid, { category, name, howTo, whatItDoes, img: image });
-      setName(""); setHowTo(""); setWhatItDoes(""); setImage(null);
-      setMsg("Card added to your stack.");
+      if (editingId) {
+        updateCustomCard(pid, editingId, { category, name, howTo, whatItDoes, img: image });
+        setMsg("Card updated.");
+      } else {
+        addCustomCard(pid, { category, name, howTo, whatItDoes, img: image });
+        setMsg("Card added to your stack.");
+      }
+      resetForm();
       setRefresh((r) => r + 1);
       setTimeout(() => setMsg(""), 2500);
     } catch (err) {
-      setMsg(err.message || "Could not add card.");
+      setMsg(err.message || "Could not save card.");
     }
   };
 
@@ -90,8 +115,15 @@ export default function CreateCard() {
         <span className="font-body text-sm">Week</span>
       </button>
 
-      <h1 className="font-display text-5xl font-bold text-white tracking-tight leading-none mt-4 mb-2">Make a card</h1>
-      <p className="text-slate-400 text-sm font-body mb-7">Add your own exercise. Share it from Settings → Export cards.</p>
+      <div className="flex items-center justify-between mt-4 mb-2">
+        <h1 className="font-display text-5xl font-bold text-white tracking-tight leading-none">{editingId ? "Edit card" : "Make a card"}</h1>
+        {editingId && (
+          <button data-testid="cancel-edit" onClick={resetForm} className="flex items-center gap-1 text-slate-400 active:text-white text-sm font-body">
+            <X className="w-4 h-4" /> Cancel
+          </button>
+        )}
+      </div>
+      <p className="text-slate-400 text-sm font-body mb-7 truncate">Build your own exercise card.</p>
 
       {/* Photo */}
       <p className="text-[11px] uppercase tracking-[0.18em] text-indigo-300/70 font-body mb-2">Photo (portrait 9:16)</p>
@@ -177,7 +209,7 @@ export default function CreateCard() {
         disabled={!canSave}
         className="w-full mt-5 bg-white text-slate-950 rounded-2xl py-4 font-body font-semibold flex items-center justify-center gap-2 min-h-[56px] disabled:opacity-30 disabled:bg-slate-800 disabled:text-slate-500"
       >
-        <Check className="w-4 h-4" strokeWidth={2.5} /> Add card
+        <Check className="w-4 h-4" strokeWidth={2.5} /> {editingId ? "Save changes" : "Add card"}
       </motion.button>
 
       {/* Existing custom cards */}
@@ -194,6 +226,22 @@ export default function CreateCard() {
                   <p className="font-body text-white text-sm truncate">{c.name}</p>
                   <p className="text-slate-500 text-xs font-body">{catTitle(c.category)}</p>
                 </div>
+                <button
+                  data-testid={`edit-custom-${c.id}`}
+                  onClick={() => startEdit(c)}
+                  className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center active:bg-slate-700 flex-shrink-0"
+                  aria-label="Edit card"
+                >
+                  <Pencil className="w-4 h-4 text-slate-300" strokeWidth={1.75} />
+                </button>
+                <button
+                  data-testid={`share-custom-${c.id}`}
+                  onClick={() => onShareCard(c)}
+                  className="w-9 h-9 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center active:bg-indigo-500/20 flex-shrink-0"
+                  aria-label="Share card"
+                >
+                  <Share2 className="w-4 h-4 text-indigo-300" strokeWidth={1.75} />
+                </button>
                 <button
                   data-testid={`delete-custom-${c.id}`}
                   onClick={() => onDelete(c.id)}

@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, Settings, Moon, Dumbbell, Sprout, RotateCcw, X, AlertTriangle, Lock, Plus } from "lucide-react";
+import { ChevronRight, Settings, Moon, Dumbbell, Sprout, RotateCcw, X, AlertTriangle, Lock, Plus, Flame } from "lucide-react";
 import {
   getActive, getWeekProgress, getProfile,
-  ensureWeek, applySeed, startNewWeek, getDisplayCount, getCustomCardsForCategory,
+  ensureWeek, applySeed, startNewWeek, getDisplayCount, getCustomCardsForCategory, getDayStreak,
 } from "@/lib/storage";
 import { mondayKey, todayDayNum } from "@/lib/week";
 import { categoryForDay } from "@/lib/weekgen";
@@ -80,6 +80,7 @@ export default function Dashboard() {
   const isUnlocked = (dayNum) => allDaysOpen || dayNum === today;
   const pid = pidOf(active);
   const displayCount = getDisplayCount();
+  const streak = getDayStreak(pid);
 
   return (
     <div className="w-full max-w-md mx-auto px-6 pt-10 pb-24 min-h-screen">
@@ -114,16 +115,25 @@ export default function Dashboard() {
       </div>
 
       {/* Progress summary */}
-      <div className="mb-5 p-5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
-          <Dumbbell className="w-5 h-5 text-indigo-400" strokeWidth={1.75} />
+      <div className="mb-5 p-5 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0">
+            <Dumbbell className="w-5 h-5 text-indigo-400" strokeWidth={1.75} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-display text-3xl font-bold text-white tracking-tight" data-testid="week-summary">
+              {doneCount} of 6 days done
+            </p>
+            <p className="text-slate-400 text-sm font-body -mt-0.5">this week</p>
+          </div>
         </div>
-        <div>
-          <p className="font-display text-3xl font-bold text-white tracking-tight" data-testid="week-summary">
-            {doneCount} of 6 days done
-          </p>
-          <p className="text-slate-400 text-sm font-body -mt-0.5">this week</p>
-        </div>
+        {streak > 0 && (
+          <div className="flex flex-col items-center px-3 py-2 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex-shrink-0" data-testid="streak-badge">
+            <Flame className="w-5 h-5 text-amber-400" strokeWidth={1.75} />
+            <span className="font-display text-lg font-bold text-white leading-none mt-0.5">{streak}</span>
+            <span className="text-[9px] uppercase tracking-wider text-amber-300/80 font-body">day{streak === 1 ? "" : "s"}</span>
+          </div>
+        )}
       </div>
 
       {/* Seed banner / controls */}

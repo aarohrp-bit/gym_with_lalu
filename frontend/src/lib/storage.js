@@ -19,6 +19,7 @@ export const DEFAULT_SETTINGS = {
   theme: "dark",           // "dark" | "light"
   displayCount: 8,         // cards shown per day
   pointsTarget: 5,         // completions needed to finish a day
+  haptics: true,           // vibration feedback
 };
 export const GUARD_SECONDS_FAST = 5;
 export const LIMIT_MAX = 10;        // hard cap for display/perform counts
@@ -447,6 +448,43 @@ export const deleteCustomCard = (profileId, cardId) => {
     data.customCards[profileId] = data.customCards[profileId].filter((c) => c.id !== cardId);
     save(data);
   }
+};
+
+export const updateCustomCard = (profileId, cardId, patch) => {
+  const data = load();
+  const list = data.customCards[profileId] || [];
+  const idx = list.findIndex((c) => c.id === cardId);
+  if (idx === -1) return null;
+  list[idx] = {
+    ...list[idx],
+    ...patch,
+    category: Number(patch.category ?? list[idx].category),
+  };
+  save(data);
+  return list[idx];
+};
+
+// Current consecutive-day workout streak (counts today if done, else from yesterday).
+export const getDayStreak = (profileId) => {
+  const wk = load().workouts[profileId] || {};
+  const set = new Set();
+  Object.values(wk).forEach((week) =>
+    Object.values(week).forEach((d) => {
+      if (d?.dayCompleted && d.finishedAt) set.add(d.finishedAt.slice(0, 10));
+    })
+  );
+  if (set.size === 0) return 0;
+  const iso = (dt) =>
+    `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+  const day = new Date();
+  day.setHours(0, 0, 0, 0);
+  if (!set.has(iso(day))) day.setDate(day.getDate() - 1); // today not done yet → start at yesterday
+  let streak = 0;
+  while (set.has(iso(day))) {
+    streak++;
+    day.setDate(day.getDate() - 1);
+  }
+  return streak;
 };
 
 // Export only custom cards (to share with friends). Pass specific ids or omit for all.

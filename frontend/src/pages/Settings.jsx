@@ -1,13 +1,14 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Timer, Zap, Sun, Moon, LogOut, Trash2, AlertTriangle, Delete, Download, Upload, BarChart3, BookOpen } from "lucide-react";
+import { ChevronLeft, Timer, Zap, Sun, Moon, LogOut, Trash2, AlertTriangle, Delete, Upload, Download, BarChart3, BookOpen, Vibrate } from "lucide-react";
 import {
   getSettings, setSettings, getActive, clearActive, getProfile,
   verifyPin, deleteProfile, lockProfile, getGuardSeconds,
   exportProfile, importProfile, exportCards, importCards, LIMIT_MAX,
 } from "@/lib/storage";
 import { applyTheme } from "@/lib/theme";
+import { shareOrDownload } from "@/lib/share";
 
 const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
 const fmtMMSS = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -41,32 +42,21 @@ export default function Settings() {
     navigate("/");
   };
 
-  const download = (payload, suffix) => {
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const safe = (profile?.name || "guest").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
-    a.href = url;
-    a.download = `gym-with-lalu-${safe}-${suffix}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
+  const safeName = () => (profile?.name || "guest").replace(/[^a-z0-9]+/gi, "-").toLowerCase();
+
+  const onExportProfile = async () => {
+    const res = await shareOrDownload(`gym-with-lalu-${safeName()}-profile.json`, exportProfile(pid));
+    if (res !== "cancelled") setDataMsg({ ok: true, text: res === "shared" ? "Profile shared." : "Profile backup downloaded." });
   };
 
-  const onExportProfile = () => {
-    download(exportProfile(pid), "profile");
-    setDataMsg({ ok: true, text: "Full profile backup downloaded." });
-  };
-
-  const onExportCards = () => {
+  const onExportCards = async () => {
     const payload = exportCards(pid);
     if (!payload.cards.length) {
-      setDataMsg({ ok: false, text: "No custom cards to export yet. Make one with the + button." });
+      setDataMsg({ ok: false, text: "No custom cards yet — make one with the + button." });
       return;
     }
-    download(payload, "cards");
-    setDataMsg({ ok: true, text: `Exported ${payload.cards.length} card(s) to share.` });
+    const res = await shareOrDownload(`gym-with-lalu-${safeName()}-cards.json`, payload);
+    if (res !== "cancelled") setDataMsg({ ok: true, text: res === "shared" ? `Shared ${payload.cards.length} card(s).` : `Exported ${payload.cards.length} card(s).` });
   };
 
   // Import auto-detects a full profile vs a shared-cards file.
@@ -172,8 +162,8 @@ export default function Settings() {
       {/* Workout limits */}
       <div className="mb-4 p-5 rounded-2xl bg-slate-900 border border-slate-800">
         <p className="font-display text-xl text-white tracking-tight mb-1">Workout size</p>
-        <p className="text-slate-400 text-xs font-body mb-3">
-          Show <span className="text-white" data-testid="display-value">{settings.displayCount ?? 8}</span> cards a day · finish <span className="text-white" data-testid="target-value">{Math.min(settings.pointsTarget ?? 5, settings.displayCount ?? 8)}</span> to complete it.
+        <p className="text-slate-400 text-xs font-body mb-3 truncate">
+          Show <span className="text-white" data-testid="display-value">{settings.displayCount ?? 8}</span> · finish <span className="text-white" data-testid="target-value">{Math.min(settings.pointsTarget ?? 5, settings.displayCount ?? 8)}</span> to complete the day.
         </p>
         <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-body mb-1">Cards shown per day</p>
         <input
@@ -182,17 +172,17 @@ export default function Settings() {
           value={settings.displayCount ?? 8}
           onChange={(e) => {
             const dc = Number(e.target.value);
-            const pt = Math.min(settings.pointsTarget ?? 5, dc);
+            const pt = Math.min(settings.pointsTarget ?? 5, dc); // finish can't exceed shown
             update({ displayCount: dc, pointsTarget: pt });
           }}
           className="w-full accent-indigo-400"
         />
-        <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-body mb-1 mt-3">Points to finish a day</p>
+        <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-body mb-1 mt-3">Points to finish (≤ cards shown)</p>
         <input
           data-testid="target-slider"
-          type="range" min="1" max={settings.displayCount ?? 8} step="1"
+          type="range" min="1" max={LIMIT_MAX} step="1"
           value={Math.min(settings.pointsTarget ?? 5, settings.displayCount ?? 8)}
-          onChange={(e) => update({ pointsTarget: Number(e.target.value) })}
+          onChange={(e) => update({ pointsTarget: Math.min(Number(e.target.value), settings.displayCount ?? 8) })}
           className="w-full accent-indigo-400"
         />
         <div className="flex justify-between text-[10px] text-slate-600 font-body mt-1"><span>1</span><span>max {LIMIT_MAX}</span></div>
@@ -220,6 +210,18 @@ export default function Settings() {
             </button>
           ))}
         </div>
+        <button
+          data-testid="haptics-toggle"
+          onClick={() => update({ haptics: !(settings.haptics !== false) })}
+          className="w-full mt-3 flex items-center justify-between py-3 px-4 rounded-xl bg-slate-800 border border-slate-700 active:bg-slate-700"
+        >
+          <span className="flex items-center gap-2 font-body text-sm text-slate-200">
+            <Vibrate className="w-4 h-4" strokeWidth={1.75} /> Vibration
+          </span>
+          <span className={`text-xs font-body font-semibold ${settings.haptics !== false ? "text-emerald-400" : "text-slate-500"}`}>
+            {settings.haptics !== false ? "On" : "Off"}
+          </span>
+        </button>
       </div>
 
       {/* Stats + replay tutorial */}
@@ -240,33 +242,33 @@ export default function Settings() {
         </button>
       </div>
 
-      {/* Data — export / import (backup, move to a new phone) */}
+      {/* Data — share / import (backup, move to a new phone) */}
       <div className="mb-4 p-5 rounded-2xl bg-slate-900 border border-slate-800">
         <p className="font-display text-xl text-white tracking-tight mb-1">Your data</p>
-        <p className="text-slate-400 text-xs font-body mb-3">Everything stays on this phone. Back it up or move it to another device.</p>
-        <div className="grid grid-cols-2 gap-2">
+        <p className="text-slate-400 text-xs font-body mb-3 truncate">On-device only — back up or share.</p>
+        <div className="grid grid-cols-3 gap-2">
           <button
             data-testid="export-profile-button"
             onClick={onExportProfile}
-            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-sm active:bg-slate-700 min-h-[48px]"
+            className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-xs active:bg-slate-700 min-h-[56px]"
           >
-            <Download className="w-4 h-4" strokeWidth={1.75} /> Profile
+            <Upload className="w-4 h-4" strokeWidth={1.75} /> Profile
           </button>
           <button
             data-testid="export-cards-button"
             onClick={onExportCards}
-            className="flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-sm active:bg-slate-700 min-h-[48px]"
+            className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-xs active:bg-slate-700 min-h-[56px]"
           >
-            <Download className="w-4 h-4" strokeWidth={1.75} /> Cards
+            <Upload className="w-4 h-4" strokeWidth={1.75} /> Cards
+          </button>
+          <button
+            data-testid="import-button"
+            onClick={() => fileRef.current?.click()}
+            className="flex flex-col items-center justify-center gap-1 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-xs active:bg-slate-700 min-h-[56px]"
+          >
+            <Download className="w-4 h-4" strokeWidth={1.75} /> Import
           </button>
         </div>
-        <button
-          data-testid="import-button"
-          onClick={() => fileRef.current?.click()}
-          className="w-full mt-2 flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-sm active:bg-slate-700 min-h-[48px]"
-        >
-          <Upload className="w-4 h-4" strokeWidth={1.75} /> Import profile or cards
-        </button>
         <input ref={fileRef} type="file" accept="application/json,.json" onChange={onImportFile} className="hidden" data-testid="import-file" />
         {dataMsg && (
           <p className={`text-xs font-body mt-3 ${dataMsg.ok ? "text-emerald-400" : "text-rose-400"}`} data-testid="data-message">{dataMsg.text}</p>
