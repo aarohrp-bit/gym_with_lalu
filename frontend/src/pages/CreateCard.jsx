@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ChevronLeft, ImagePlus, Trash2, Check, Share2, Pencil, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ChevronLeft, ImagePlus, Trash2, Check, Share2, Pencil, X, QrCode, Copy } from "lucide-react";
+import QRCode from "qrcode";
 import { getActive, addCustomCard, getCustomCards, deleteCustomCard, updateCustomCard, MAX_CUSTOM_CARDS } from "@/lib/storage";
 import { CATEGORIES } from "@/data/exercises";
 import { shareOrDownload } from "@/lib/share";
+import { cardShareUrl } from "@/lib/cardlink";
 
 const TARGET_AR = 9 / 16; // 0.5625 — the exercise-card aspect ratio
 const AR_TOL = 0.08;       // ±8%
@@ -24,6 +26,7 @@ export default function CreateCard() {
   const [msg, setMsg] = useState("");
   const [refresh, setRefresh] = useState(0);
   const [editingId, setEditingId] = useState(null);
+  const [qr, setQr] = useState(null); // { name, url, dataUrl, copied }
 
   useEffect(() => { if (!active) navigate("/"); }, [active, navigate]);
   if (!active) return null;
@@ -47,6 +50,30 @@ export default function CreateCard() {
       type: "gym-with-lalu-cards", version: 1, exportedAt: new Date().toISOString(),
       cards: [{ category: c.category, name: c.name, howTo: c.howTo, whatItDoes: c.whatItDoes, img: c.img }],
     });
+  };
+
+  const onQrCard = async (c) => {
+    const url = cardShareUrl(c);
+    try {
+      const dataUrl = await QRCode.toDataURL(url, {
+        margin: 1, width: 320, errorCorrectionLevel: "M",
+        color: { dark: "#0f172a", light: "#ffffff" },
+      });
+      setQr({ name: c.name, url, dataUrl, copied: false });
+    } catch {
+      setQr({ name: c.name, url, dataUrl: null, copied: false });
+    }
+  };
+
+  const onCopyLink = async () => {
+    try { await navigator.clipboard.writeText(qr.url); setQr((q) => ({ ...q, copied: true })); } catch { /* ignore */ }
+  };
+
+  const onShareLink = async () => {
+    try {
+      if (navigator.share) await navigator.share({ title: "Gym with Lalu card", url: qr.url });
+      else onCopyLink();
+    } catch { /* ignore */ }
   };
 
   const onFile = (e) => {
@@ -235,12 +262,20 @@ export default function CreateCard() {
                   <Pencil className="w-4 h-4 text-slate-300" strokeWidth={1.75} />
                 </button>
                 <button
+                  data-testid={`qr-custom-${c.id}`}
+                  onClick={() => onQrCard(c)}
+                  className="w-9 h-9 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center active:bg-indigo-500/20 flex-shrink-0"
+                  aria-label="Share card via QR"
+                >
+                  <QrCode className="w-4 h-4 text-indigo-300" strokeWidth={1.75} />
+                </button>
+                <button
                   data-testid={`share-custom-${c.id}`}
                   onClick={() => onShareCard(c)}
-                  className="w-9 h-9 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center active:bg-indigo-500/20 flex-shrink-0"
-                  aria-label="Share card"
+                  className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center active:bg-slate-700 flex-shrink-0"
+                  aria-label="Share card file"
                 >
-                  <Share2 className="w-4 h-4 text-indigo-300" strokeWidth={1.75} />
+                  <Share2 className="w-4 h-4 text-slate-300" strokeWidth={1.75} />
                 </button>
                 <button
                   data-testid={`delete-custom-${c.id}`}
@@ -255,6 +290,58 @@ export default function CreateCard() {
           </div>
         </div>
       )}
+
+      {/* QR share modal */}
+      <AnimatePresence>
+        {qr && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[60] bg-slate-950/85 backdrop-blur-sm flex items-center justify-center px-6"
+            data-testid="qr-modal"
+            onClick={() => setQr(null)}
+          >
+            <motion.div
+              initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 20, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm bg-slate-900 border border-slate-800 rounded-3xl p-6 text-center"
+            >
+              <h3 className="font-display text-3xl font-bold text-white tracking-tight">Scan to add</h3>
+              <p className="font-body text-slate-400 text-sm mt-1 mb-5 truncate">{qr.name}</p>
+              {qr.dataUrl ? (
+                <img src={qr.dataUrl} alt="QR code" className="w-56 h-56 mx-auto rounded-2xl bg-white p-2" data-testid="qr-image" />
+              ) : (
+                <p className="text-rose-400 text-sm font-body">Couldn't generate a QR.</p>
+              )}
+              <p className="text-slate-500 text-[11px] font-body mt-4 leading-relaxed">
+                Point any phone camera at this code to open the app and add the card. Sent without a photo — add one by editing.
+              </p>
+              <div className="flex gap-2 mt-5">
+                <button
+                  data-testid="qr-copy"
+                  onClick={onCopyLink}
+                  className="flex-1 flex items-center justify-center gap-2 bg-slate-800 border border-slate-700 text-slate-200 rounded-2xl py-3 font-body text-sm active:bg-slate-700 min-h-[48px]"
+                >
+                  <Copy className="w-4 h-4" strokeWidth={1.75} /> {qr.copied ? "Copied!" : "Copy link"}
+                </button>
+                <button
+                  data-testid="qr-share"
+                  onClick={onShareLink}
+                  className="flex-1 flex items-center justify-center gap-2 bg-indigo-400 text-slate-950 rounded-2xl py-3 font-body font-semibold text-sm active:bg-indigo-300 min-h-[48px]"
+                >
+                  <Share2 className="w-4 h-4" strokeWidth={2} /> Share link
+                </button>
+              </div>
+              <button
+                data-testid="qr-close"
+                onClick={() => setQr(null)}
+                className="w-full mt-3 text-slate-400 font-body text-sm py-2 active:text-white"
+              >
+                Close
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

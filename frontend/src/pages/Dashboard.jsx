@@ -4,8 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, Settings, Moon, Dumbbell, Sprout, RotateCcw, X, AlertTriangle, Lock, Plus, Flame } from "lucide-react";
 import {
   getActive, getWeekProgress, getProfile,
-  ensureWeek, applySeed, startNewWeek, getDisplayCount, getCustomCardsForCategory, getDayStreak,
+  ensureWeek, applySeed, startNewWeek, getDisplayCount, getCustomCardsForCategory, getDayStreak, importCards,
 } from "@/lib/storage";
+import { parseCardRaw } from "@/lib/cardlink";
 import { mondayKey, todayDayNum } from "@/lib/week";
 import { categoryForDay } from "@/lib/weekgen";
 import { DAY_META, EXERCISES, categoryTitle } from "@/data/exercises";
@@ -31,6 +32,23 @@ export default function Dashboard() {
     const pid = pidOf(a);
     setWeek(ensureWeek(pid, weekStart));
     setProgress(getWeekProgress(pid, weekStart));
+
+    // A scanned/opened shared-card link → offer to import it.
+    try {
+      const raw = sessionStorage.getItem("gym_lalu_pending_card");
+      if (raw) {
+        sessionStorage.removeItem("gym_lalu_pending_card");
+        const parsed = parseCardRaw(raw);
+        if (parsed) {
+          setConfirm({
+            title: "Add shared card?",
+            message: `"${parsed.name}" → ${categoryTitle(parsed.category)}. Comes without a photo — add one later by editing.`,
+            label: "Add card",
+            onConfirm: () => { importCards(parsed.payload, pid); setConfirm(null); },
+          });
+        }
+      }
+    } catch { /* ignore */ }
   }, [navigate, weekStart]);
 
   const onOpenDay = (day) => navigate(`/day/${day}`);

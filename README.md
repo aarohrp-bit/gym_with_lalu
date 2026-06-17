@@ -52,7 +52,7 @@ of **points** each day. It installs to your phone’s home screen, opens fullscr
 | ⏱️ | **Timed circuits (Type B)** | Start a circuit, train along the countdown, and Finish when it hits zero. |
 | 🛡️ | **Recovery lock** | A cooldown between completions so you can’t accidentally blow through a day. |
 | 🌱 | **Seeds** | You and a friend type the same seed and get an identical week — deterministic on any device. |
-| ✍️ | **Custom cards** | Add your own exercises (photo + how-to + category) and share them with friends. |
+| ✍️ | **Custom cards** | Add your own exercises (photo + how-to + category) and share them by **file or QR code**. |
 | 📊 | **Stats & streaks** | Workouts done, favourite focus, most/least-done exercise, and a day-streak badge. |
 | 💾 | **Backup & share** | One-tap export/import of your whole profile or just your custom cards. |
 | 🌗 | **Dark / light theme** | Dark by default, with a clean light mode. Plus optional vibration feedback. |
@@ -105,7 +105,14 @@ or start a new week to go back to your personalized plan.
 Tap **➕** on the dashboard to **Make a card**:
 1. Pick a **portrait (~9:16) photo** — off-ratio images are rejected so cards stay consistent.
 2. Add a **name**, **how to perform**, **what it does**, and a **category**.
-3. Save — it joins that category’s pool. Edit (✏️), delete (🗑️), or **share** (↗️) it any time.
+3. Save — it joins that category’s pool. **Edit** (✏️), **delete** (🗑️), or share it any time.
+
+**Sharing a card three ways:**
+- **📷 QR code** — tap the QR button on a card to show a code. A friend points their phone
+  camera at it, the app opens, and it offers to add the card. *(QR cards travel as text —
+  name + instructions + category — so they arrive without the photo; add one by editing.)*
+- **🔗 Link** — copy or share the same deep link directly (e.g. paste into chat).
+- **📄 File** — share a `.json` that **includes the photo**, for full-fidelity transfer.
 
 ### 7 · Settings
 The ⚙️ menu lets you tune:

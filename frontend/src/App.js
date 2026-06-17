@@ -34,6 +34,17 @@ function App() {
     if (params.get("fastGuard") === "1") {
       window.sessionStorage.setItem("fastGuard", "1");
     }
+    // A shared-card deep link (?card=...) → stash it and clean the URL; the dashboard
+    // will offer to import it once a profile is active.
+    const cardRaw = params.get("card");
+    if (cardRaw) {
+      try { window.sessionStorage.setItem("gym_lalu_pending_card", cardRaw); } catch { /* ignore */ }
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("card");
+        window.history.replaceState(null, "", url.pathname + url.search + url.hash);
+      } catch { /* ignore */ }
+    }
   }
   return (
     <div className="App" data-testid="app-root">
