@@ -185,6 +185,9 @@ export const EXERCISES = {
     a(4, "45-Degree Leg Press", "mc6wa9",
       "Sit in the machine. Push the heavy plate upward with your feet, then lower with control.",
       "Safely moves heavy loads to build overall leg mass."),
+    a(4, "Dumbbell Step-Up (On a Box)", "hxq6im",
+      "Hold a dumbbell in each hand. Step one foot fully onto a box, drive through that heel to stand tall, then step down with control. Alternate legs.",
+      "Builds single-leg strength, glutes, and balance."),
   ],
   5: [
     a(5, "Wide-Grip Cable Lat Pulldowns", "c8pe80",
@@ -257,6 +260,9 @@ export const EXERCISES = {
     a(6, "Seated Dumbbell Wrist Curls", "n6ecfw",
       "Rest forearms on thighs holding small weights. Flex wrists upward and downward.",
       "Strengthens the forearms and grip."),
+    a(6, "Single-Arm Low Cable Curls", "iywvua",
+      "Stand beside a low cable with a single D-handle. Curl it up to your shoulder one arm at a time, keeping your elbow pinned to your side.",
+      "Unilateral focus to even out left/right bicep imbalances."),
   ],
   7: [], // Rest day
 };

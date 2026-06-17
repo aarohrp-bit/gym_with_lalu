@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, RotateCw, Flag, Pause } from "lucide-react";
 import { getCircuitSeconds } from "@/lib/storage";
 import { vibrate } from "@/lib/haptics";
+import { chime } from "@/lib/sound";
 
 const fmtMMSS = (s) => {
   const m = Math.floor(s / 60);
@@ -26,9 +27,9 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
     return () => clearInterval(id);
   }, []);
 
-  // Buzz when the timer hits zero (Finish unlocks).
+  // Buzz + chime when the timer hits zero (Finish unlocks).
   useEffect(() => {
-    if (secondsLeft === 0) vibrate([60, 40, 60]);
+    if (secondsLeft === 0) { vibrate([60, 40, 60]); chime(); }
   }, [secondsLeft]);
 
   // Lock browser back during circuit — show confirm instead of leaving

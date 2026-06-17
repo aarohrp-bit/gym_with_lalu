@@ -9,6 +9,7 @@ import { categoryForDay } from "@/lib/weekgen";
 import CircuitRunner from "@/components/CircuitRunner";
 import NoteField from "@/components/NoteField";
 import { vibrate } from "@/lib/haptics";
+import { beep, chime } from "@/lib/sound";
 
 export default function Workout() {
   const { day } = useParams();
@@ -121,8 +122,10 @@ export default function Workout() {
   const removeCard = (card, exitType) => {
     setAction({ type: exitType || "complete" });
     setCompletingId(card.id);
-    // Haptic: a heavier buzz when this completion finishes the day.
-    vibrate(points + 1 >= POINTS_TARGET ? [40, 30, 80] : 28);
+    // Haptic + sound: a heavier buzz / chime when this completion finishes the day.
+    const finishes = points + 1 >= POINTS_TARGET;
+    vibrate(finishes ? [40, 30, 80] : 28);
+    if (finishes) chime(); else beep(880, 110);
     setPoints((p) => p + 1);
     setFlipped(false);
     setCompletedIds((s) => {

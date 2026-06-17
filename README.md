@@ -55,7 +55,8 @@ of **points** each day. It installs to your phone’s home screen, opens fullscr
 | ✍️ | **Custom cards** | Add your own exercises (photo + how-to + category) and share them by **file or QR code**. |
 | 📊 | **Stats & streaks** | Workouts done, favourite focus, most/least-done exercise, and a day-streak badge. |
 | 💾 | **Backup & share** | One-tap export/import of your whole profile or just your custom cards. |
-| 🌗 | **Dark / light theme** | Dark by default, with a clean light mode. Plus optional vibration feedback. |
+| 🌗 | **Theme & feedback** | Dark by default with a clean light mode, plus optional **vibration** and **sound** cues. |
+| 🛠️ | **Manage profile** | Rename a profile or change its PIN any time from Settings. |
 | 📲 | **Installable + offline** | Full PWA: precaches the app and every image, so it runs in airplane mode. |
 
 ---
@@ -119,7 +120,8 @@ The ⚙️ menu lets you tune:
 - **Recovery cooldown** and **circuit timer** length.
 - **Workout size** — how many cards show per day and how many points finish it
   (max 10 each; points can never exceed cards shown).
-- **Theme** (dark / light) and **vibration** on/off.
+- **Theme** (dark / light) with **vibration** and **sound** toggles.
+- **Edit profile** — rename it or change its PIN.
 - **Your data** — **Export Profile**, **Export Cards**, or **Import** (auto-detects the file).
 - **Stats**, replay the **tutorial**, **delete profile** (PIN-protected), and **log out**.
 

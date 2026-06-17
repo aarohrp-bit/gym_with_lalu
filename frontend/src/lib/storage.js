@@ -20,6 +20,7 @@ export const DEFAULT_SETTINGS = {
   displayCount: 8,         // cards shown per day
   pointsTarget: 5,         // completions needed to finish a day
   haptics: true,           // vibration feedback
+  sound: true,             // sound cues
 };
 export const GUARD_SECONDS_FAST = 5;
 export const LIMIT_MAX = 10;        // hard cap for display/perform counts
@@ -111,6 +112,20 @@ export const addProfile = (name, pin) => {
   data.profiles.push(profile);
   save(data);
   return profile;
+};
+
+export const renameProfile = (profileId, name) => {
+  const data = load();
+  const p = data.profiles.find((x) => x.id === profileId);
+  if (p && String(name).trim()) { p.name = String(name).trim(); save(data); }
+  return p || null;
+};
+
+export const changePin = (profileId, newPin) => {
+  const data = load();
+  const p = data.profiles.find((x) => x.id === profileId);
+  if (p && /^\d{4}$/.test(String(newPin))) { p.pin = String(newPin); save(data); return true; }
+  return false;
 };
 
 export const verifyPin = (profileId, pin) => {

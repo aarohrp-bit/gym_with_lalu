@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Timer, Zap, Sun, Moon, LogOut, Trash2, AlertTriangle, Delete, Upload, Download, BarChart3, BookOpen, Vibrate } from "lucide-react";
+import { ChevronLeft, Timer, Zap, Sun, Moon, LogOut, Trash2, AlertTriangle, Delete, Upload, Download, BarChart3, BookOpen, Vibrate, Volume2, UserCog, Check } from "lucide-react";
 import {
   getSettings, setSettings, getActive, clearActive, getProfile,
   verifyPin, deleteProfile, lockProfile, getGuardSeconds,
   exportProfile, importProfile, exportCards, importCards, LIMIT_MAX,
+  renameProfile, changePin,
 } from "@/lib/storage";
 import { applyTheme } from "@/lib/theme";
 import { shareOrDownload } from "@/lib/share";
@@ -26,6 +27,10 @@ export default function Settings() {
   const [error, setError] = useState("");
   const [dataMsg, setDataMsg] = useState(null); // { ok, text }
   const fileRef = useRef(null);
+  const [nameDraft, setNameDraft] = useState(profile?.name || "");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [profileMsg, setProfileMsg] = useState(null); // { ok, text }
 
   useEffect(() => { if (!active) navigate("/"); }, [active, navigate]);
   if (!active) return null;
@@ -34,6 +39,23 @@ export default function Settings() {
     const next = setSettings(partial);
     setLocal({ ...next });
     if ("theme" in partial) applyTheme(partial.theme);
+  };
+
+  const onSaveName = () => {
+    if (!profile || !nameDraft.trim()) return;
+    renameProfile(profile.id, nameDraft);
+    setProfileMsg({ ok: true, text: "Name updated." });
+    setTimeout(() => setProfileMsg(null), 2000);
+  };
+
+  const onSavePin = () => {
+    if (!profile) return;
+    if (!/^\d{4}$/.test(newPin)) { setProfileMsg({ ok: false, text: "PIN must be 4 digits." }); return; }
+    if (newPin !== confirmPin) { setProfileMsg({ ok: false, text: "PINs don't match." }); return; }
+    changePin(profile.id, newPin);
+    setNewPin(""); setConfirmPin("");
+    setProfileMsg({ ok: true, text: "PIN changed." });
+    setTimeout(() => setProfileMsg(null), 2000);
   };
 
   const onLogout = () => {
@@ -210,18 +232,32 @@ export default function Settings() {
             </button>
           ))}
         </div>
-        <button
-          data-testid="haptics-toggle"
-          onClick={() => update({ haptics: !(settings.haptics !== false) })}
-          className="w-full mt-3 flex items-center justify-between py-3 px-4 rounded-xl bg-slate-800 border border-slate-700 active:bg-slate-700"
-        >
-          <span className="flex items-center gap-2 font-body text-sm text-slate-200">
-            <Vibrate className="w-4 h-4" strokeWidth={1.75} /> Vibration
-          </span>
-          <span className={`text-xs font-body font-semibold ${settings.haptics !== false ? "text-emerald-400" : "text-slate-500"}`}>
-            {settings.haptics !== false ? "On" : "Off"}
-          </span>
-        </button>
+        <div className="grid grid-cols-2 gap-2 mt-3">
+          <button
+            data-testid="haptics-toggle"
+            onClick={() => update({ haptics: !(settings.haptics !== false) })}
+            className="flex items-center justify-between py-3 px-4 rounded-xl bg-slate-800 border border-slate-700 active:bg-slate-700"
+          >
+            <span className="flex items-center gap-2 font-body text-sm text-slate-200">
+              <Vibrate className="w-4 h-4" strokeWidth={1.75} /> Buzz
+            </span>
+            <span className={`text-xs font-body font-semibold ${settings.haptics !== false ? "text-emerald-400" : "text-slate-500"}`}>
+              {settings.haptics !== false ? "On" : "Off"}
+            </span>
+          </button>
+          <button
+            data-testid="sound-toggle"
+            onClick={() => update({ sound: !(settings.sound !== false) })}
+            className="flex items-center justify-between py-3 px-4 rounded-xl bg-slate-800 border border-slate-700 active:bg-slate-700"
+          >
+            <span className="flex items-center gap-2 font-body text-sm text-slate-200">
+              <Volume2 className="w-4 h-4" strokeWidth={1.75} /> Sound
+            </span>
+            <span className={`text-xs font-body font-semibold ${settings.sound !== false ? "text-emerald-400" : "text-slate-500"}`}>
+              {settings.sound !== false ? "On" : "Off"}
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Stats + replay tutorial */}
@@ -274,6 +310,58 @@ export default function Settings() {
           <p className={`text-xs font-body mt-3 ${dataMsg.ok ? "text-emerald-400" : "text-rose-400"}`} data-testid="data-message">{dataMsg.text}</p>
         )}
       </div>
+
+      {/* Edit profile — rename + change PIN (not for guest) */}
+      {profile && (
+        <div className="mb-4 p-5 rounded-2xl bg-slate-900 border border-slate-800">
+          <div className="flex items-center gap-2 mb-3">
+            <UserCog className="w-4 h-4 text-indigo-400" strokeWidth={1.75} />
+            <p className="font-display text-xl text-white tracking-tight">Edit profile</p>
+          </div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-body mb-2">Name</p>
+          <div className="flex gap-2">
+            <input
+              data-testid="rename-input"
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              maxLength={24}
+              className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-body focus:outline-none focus:border-indigo-500/50 min-h-[48px]"
+            />
+            <button
+              data-testid="rename-save"
+              onClick={onSaveName}
+              disabled={!nameDraft.trim() || nameDraft.trim() === profile.name}
+              className="px-4 rounded-xl bg-indigo-400 text-slate-950 font-body font-semibold disabled:opacity-30 min-h-[48px]"
+            >
+              Save
+            </button>
+          </div>
+          <p className="text-[10px] uppercase tracking-[0.18em] text-slate-500 font-body mb-2 mt-4">Change PIN</p>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              data-testid="new-pin" value={newPin} onChange={(e) => setNewPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              inputMode="numeric" placeholder="New 4-digit"
+              className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-body tracking-[0.3em] placeholder:tracking-normal placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 min-h-[48px]"
+            />
+            <input
+              data-testid="confirm-pin" value={confirmPin} onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
+              inputMode="numeric" placeholder="Confirm"
+              className="bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white font-body tracking-[0.3em] placeholder:tracking-normal placeholder:text-slate-600 focus:outline-none focus:border-indigo-500/50 min-h-[48px]"
+            />
+          </div>
+          <button
+            data-testid="change-pin-save"
+            onClick={onSavePin}
+            disabled={newPin.length !== 4 || confirmPin.length !== 4}
+            className="w-full mt-2 flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-sm active:bg-slate-700 disabled:opacity-30 min-h-[48px]"
+          >
+            <Check className="w-4 h-4" strokeWidth={2} /> Update PIN
+          </button>
+          {profileMsg && (
+            <p className={`text-xs font-body mt-3 ${profileMsg.ok ? "text-emerald-400" : "text-rose-400"}`} data-testid="profile-message">{profileMsg.text}</p>
+          )}
+        </div>
+      )}
 
       {/* Danger zone — delete profile (not for guest) */}
       {profile && (
