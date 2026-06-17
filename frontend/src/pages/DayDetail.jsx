@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, Play, CheckCircle2, Sparkles, AlertTriangle, Lock } from "lucide-react";
+import { ChevronLeft, Play, CheckCircle2, Sparkles, AlertTriangle, Lock, Heart } from "lucide-react";
 import { DAY_META, EXERCISES, categoryTitle } from "@/data/exercises";
 import { CATEGORY_BLURBS } from "@/data/categoryBlurbs";
-import { getActive, getWorkout, resetWorkout, ensureWeek, getPointsTarget, getDisplayCount, getCustomCardsForCategory } from "@/lib/storage";
+import { getActive, getWorkout, resetWorkout, ensureWeek, getPointsTarget, getDisplayCount, getCustomCardsForCategory, completeRestDay, isRestDayDone } from "@/lib/storage";
 import { mondayKey, todayDayNum } from "@/lib/week";
 import { categoryForDay } from "@/lib/weekgen";
 import StatusBadge from "@/components/StatusBadge";
@@ -15,6 +15,7 @@ export default function DayDetail() {
   const dayNum = Number(day);
   const meta = DAY_META.find((d) => d.day === dayNum);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [restDone, setRestDone] = useState(false);
   const weekStart = useMemo(() => mondayKey(), []);
   const active = getActive();
   const pid = active ? (active.isGuest ? "guest" : active.profileId) : null;
@@ -150,8 +151,30 @@ export default function DayDetail() {
       )}
 
       {restDay && (
-        <div className="mt-10 text-center">
-          <p className="font-display text-2xl text-slate-400 tracking-tight">No workout today.</p>
+        <div className="mt-8">
+          <div className="p-5 rounded-2xl bg-slate-900 border border-slate-800">
+            <div className="flex items-center gap-2 mb-2">
+              <Heart className="w-4 h-4 text-rose-400" strokeWidth={1.75} />
+              <p className="font-display text-xl text-white tracking-tight">Active recovery</p>
+            </div>
+            <p className="font-body text-slate-400 text-sm leading-relaxed mb-4">
+              Take a walk, stretch, and hydrate. Logging it keeps your streak alive.
+            </p>
+            {(restDone || (pid && isRestDayDone(pid, weekStart))) ? (
+              <div className="flex items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 font-body font-medium" data-testid="rest-done">
+                <CheckCircle2 className="w-4 h-4" strokeWidth={1.75} /> Recovery logged this week
+              </div>
+            ) : (
+              <motion.button
+                whileTap={{ scale: 0.97 }}
+                data-testid="log-rest-button"
+                onClick={() => { if (pid) { completeRestDay(pid, weekStart); setRestDone(true); } }}
+                className="w-full bg-white text-slate-950 rounded-2xl py-3.5 font-body font-semibold flex items-center justify-center gap-2 min-h-[52px]"
+              >
+                <Heart className="w-4 h-4 fill-current" strokeWidth={2} /> Log recovery
+              </motion.button>
+            )}
+          </div>
         </div>
       )}
 

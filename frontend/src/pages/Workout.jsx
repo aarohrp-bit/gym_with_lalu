@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, RotateCw, ArrowRight, ChevronUp, ChevronDown, Zap, Play, Lock } from "lucide-react";
+import { ChevronLeft, ArrowRight, ChevronUp, ChevronDown, Zap, Play, Lock, Star } from "lucide-react";
 import { DAY_META, EXERCISES, categoryTitle } from "@/data/exercises";
-import { getActive, getWorkout, addCompletion, getPointsTarget, getDisplayCount, getCustomCardsForCategory, getCounts, getLastCompletionAt, getGuardSeconds, getCircuitSeconds, ensureWeek } from "@/lib/storage";
+import { getActive, getWorkout, addCompletion, getPointsTarget, getDisplayCount, getCustomCardsForCategory, getCounts, getLastCompletionAt, getGuardSeconds, getCircuitSeconds, ensureWeek, getFavourites, toggleFavourite } from "@/lib/storage";
 import { mondayKey, todayDayNum } from "@/lib/week";
 import { categoryForDay } from "@/lib/weekgen";
 import CircuitRunner from "@/components/CircuitRunner";
@@ -48,6 +48,10 @@ export default function Workout() {
   // Eligible cards: ALL types (A + B), not yet completed.
   // Seed → fixed reproducible order; else least-done-first; guest → stable order.
   const counts = useMemo(() => (pid ? getCounts(pid) : {}), [pid]);
+  // Favourites captured at mount drive ordering (no live reshuffle); favSet drives the star UI.
+  const initialFavs = useMemo(() => (pid ? getFavourites(pid) : []), [pid]);
+  const [favSet, setFavSet] = useState(() => new Set(pid ? getFavourites(pid) : []));
+  const onToggleFav = (id) => { toggleFavourite(pid, id); setFavSet(new Set(getFavourites(pid))); vibrate(15); };
   const allCards = useMemo(() => {
     const base = EXERCISES[catId] || [];
     const custom = pid ? getCustomCardsForCategory(pid, catId) : [];
@@ -66,9 +70,15 @@ export default function Workout() {
         .sort((a, b) => a.c - b.c || a.i - b.i)
         .map((x) => x.e);
     }
+    // Pin favourites to the front (non-seed weeks only, to keep seeds in sync).
+    if (!week?.seed && initialFavs.length) {
+      ordered = [...ordered].sort(
+        (a, b) => (initialFavs.includes(b.id) ? 1 : 0) - (initialFavs.includes(a.id) ? 1 : 0)
+      );
+    }
     // The day shows at most `displayCount` cards from the (possibly larger) pool.
     return ordered.slice(0, displayCount);
-  }, [catId, pid, counts, week, displayCount]);
+  }, [catId, pid, counts, week, displayCount, initialFavs]);
   const remaining = useMemo(
     () => allCards.filter((e) => !completedIds.has(e.id)),
     [allCards, completedIds]
@@ -373,7 +383,16 @@ export default function Workout() {
                     >
                       <div className="flex items-start justify-between mb-4">
                         <p className="text-[10px] uppercase tracking-[0.22em] text-indigo-300/70 font-body">Coaching</p>
-                        <RotateCw className="w-3.5 h-3.5 text-indigo-300/60" strokeWidth={1.5} />
+                        <button
+                          data-testid="favourite-toggle"
+                          onPointerDownCapture={(e) => e.stopPropagation()}
+                          onClick={() => onToggleFav(current.id)}
+                          className="flex items-center gap-1 px-2 py-1 -mr-1 rounded-lg active:bg-slate-800"
+                          aria-label={favSet.has(current.id) ? "Unpin exercise" : "Pin exercise to front"}
+                        >
+                          <Star className={`w-4 h-4 ${favSet.has(current.id) ? "text-amber-300 fill-amber-300" : "text-slate-500"}`} strokeWidth={1.75} />
+                          <span className="text-[10px] uppercase tracking-wider font-body text-slate-500">{favSet.has(current.id) ? "Pinned" : "Pin"}</span>
+                        </button>
                       </div>
                       <h3 className="font-display text-2xl text-white font-bold tracking-tight leading-tight mb-5">
                         {current.name}

@@ -52,8 +52,11 @@ of **points** each day. It installs to your phone’s home screen, opens fullscr
 | ⏱️ | **Timed circuits (Type B)** | Start a circuit, train along the countdown, and Finish when it hits zero. |
 | 🛡️ | **Recovery lock** | A cooldown between completions so you can’t accidentally blow through a day. |
 | 🌱 | **Seeds** | You and a friend type the same seed and get an identical week — deterministic on any device. |
-| ✍️ | **Custom cards** | Add your own exercises (photo + how-to + category) and share them by **file or QR code**. |
+| ✍️ | **Custom cards** | Add your own exercises (photo + how-to + category); share by **file, link, or QR**, and **scan a QR** to import. |
+| ⭐ | **Pin favourites** | Star an exercise to pin it to the front of its category. |
+| 💆 | **Rest-day check-in** | Log active recovery on Sunday to keep your streak alive. |
 | 📊 | **Stats & streaks** | Workouts done, favourite focus, most/least-done exercise, and a day-streak badge. |
+| 📤 | **Share your day** | Turn a finished day into an image to post or send. |
 | 💾 | **Backup & share** | One-tap export/import of your whole profile or just your custom cards. |
 | 🌗 | **Theme & feedback** | Dark by default with a clean light mode, plus optional **vibration** and **sound** cues. |
 | 🛠️ | **Manage profile** | Rename a profile or change its PIN any time from Settings. |
@@ -86,10 +89,14 @@ Tap today’s tile → read the short blurb → **Enter workout**. Then, on each
 |---|---|
 | 👉 **Swipe right** | Finish the exercise (+1 point) |
 | 👆👇 **Swipe up / down** | Browse to other exercises you haven’t done |
-| 👆👆 **Double-tap** | Flip the card → How to perform · What it does · **your last-weight note** |
+| 👆👆 **Double-tap** | Flip the card → How to perform · What it does · **your last-weight note** · **⭐ pin** |
 
 A **recovery lock** counts down between completions. Reach your points target and the day
-locks with a **summary** (what you did + finish times).
+locks with a **summary** (what you did + finish times) — tap **Share** there to post your day
+as an image. Flip any card and tap the **star** to pin that exercise to the front next time.
+
+On **Sunday**, tap the rest tile to **log active recovery** (walk / stretch / hydrate) and keep
+your streak going.
 
 ### 4 · Circuits (Type B)
 On the Chest and Biceps days one card is a **circuit**. Tap **Start** to open the timed
@@ -122,7 +129,7 @@ The ⚙️ menu lets you tune:
   (max 10 each; points can never exceed cards shown).
 - **Theme** (dark / light) with **vibration** and **sound** toggles.
 - **Edit profile** — rename it or change its PIN.
-- **Your data** — **Export Profile**, **Export Cards**, or **Import** (auto-detects the file).
+- **Your data** — **Export Profile**, **Export Cards**, **Import** (auto-detects the file), or **Scan a card QR**.
 - **Stats**, replay the **tutorial**, **delete profile** (PIN-protected), and **log out**.
 
 ### 8 · Install as an app / APK

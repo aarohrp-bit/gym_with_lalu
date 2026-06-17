@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle2, Clock, Trophy } from "lucide-react";
+import { CheckCircle2, Clock, Trophy, Share2 } from "lucide-react";
 import { DAY_META, categoryTitle } from "@/data/exercises";
 import { getActive, getWorkout, getWeek } from "@/lib/storage";
 import { mondayKey } from "@/lib/week";
@@ -47,6 +47,55 @@ export default function Summary() {
   const first = completions[0];
   const last = completions[completions.length - 1];
   const sessionDuration = fmtSessionDuration(first.completedAt, last.completedAt);
+
+  const onShareImage = async () => {
+    const n = completions.length;
+    const W = 1080, H = 470 + n * 96 + 150;
+    const canvas = document.createElement("canvas");
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext("2d");
+    const rrect = (x, y, w, h, r) => {
+      if (ctx.roundRect) { ctx.beginPath(); ctx.roundRect(x, y, w, h, r); }
+      else { ctx.beginPath(); ctx.rect(x, y, w, h); }
+    };
+    ctx.fillStyle = "#020617"; ctx.fillRect(0, 0, W, H);
+    ctx.textBaseline = "alphabetic";
+    ctx.fillStyle = "#818cf8"; ctx.font = "600 34px 'DM Sans', sans-serif";
+    ctx.fillText("GYM WITH LALU", 80, 110);
+    ctx.fillStyle = "#34d399"; ctx.font = "700 30px 'DM Sans', sans-serif";
+    ctx.fillText("DAY COMPLETE", 80, 175);
+    ctx.fillStyle = "#ffffff"; ctx.font = "800 104px 'Barlow Condensed', sans-serif";
+    ctx.fillText(title.toUpperCase(), 78, 285);
+    ctx.fillStyle = "#94a3b8"; ctx.font = "400 32px 'DM Sans', sans-serif";
+    ctx.fillText(`${new Date(first.completedAt).toLocaleDateString()}   ·   ${n} done   ·   ${sessionDuration}`, 80, 350);
+    let y = 470;
+    completions.forEach((c) => {
+      ctx.fillStyle = "#0f172a"; rrect(80, y - 54, W - 160, 78, 18); ctx.fill();
+      ctx.fillStyle = "#34d399"; ctx.font = "700 36px 'DM Sans', sans-serif"; ctx.fillText("✓", 112, y);
+      ctx.fillStyle = "#ffffff"; ctx.font = "500 38px 'DM Sans', sans-serif";
+      const name = c.name.length > 26 ? c.name.slice(0, 25) + "…" : c.name;
+      ctx.fillText(name, 170, y);
+      ctx.fillStyle = "#cbd5e1"; ctx.font = "600 34px 'Barlow Condensed', sans-serif";
+      const t = fmtTimeHM(c.completedAt); ctx.fillText(t, W - 90 - ctx.measureText(t).width, y);
+      y += 96;
+    });
+    ctx.fillStyle = "#475569"; ctx.font = "400 28px 'DM Sans', sans-serif";
+    ctx.fillText("aarohrp-bit.github.io/gym_with_lalu", 80, H - 60);
+    const blob = await new Promise((r) => canvas.toBlob(r, "image/png"));
+    if (!blob) return;
+    const file = new File([blob], "gym-with-lalu-day.png", { type: "image/png" });
+    try {
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: "Gym with Lalu" });
+        return;
+      }
+    } catch (e) { if (e && e.name === "AbortError") return; }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "gym-with-lalu-day.png";
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="w-full max-w-md mx-auto px-6 pt-10 pb-32 min-h-screen">
@@ -120,12 +169,20 @@ export default function Summary() {
       </motion.div>
 
       <div className="fixed bottom-20 left-0 right-0 px-6 z-30">
-        <div className="max-w-md mx-auto">
+        <div className="max-w-md mx-auto flex gap-2">
+          <motion.button
+            whileTap={{ scale: 0.97 }}
+            data-testid="share-day-button"
+            onClick={onShareImage}
+            className="flex items-center justify-center gap-2 bg-slate-900 border border-slate-800 text-white rounded-2xl py-4 px-5 font-body font-semibold min-h-[56px]"
+          >
+            <Share2 className="w-4 h-4" strokeWidth={2} /> Share
+          </motion.button>
           <motion.button
             whileTap={{ scale: 0.97 }}
             data-testid="back-to-week-button"
             onClick={() => navigate("/dashboard")}
-            className="w-full bg-white text-slate-950 rounded-2xl py-4 font-body font-semibold min-h-[56px]"
+            className="flex-1 bg-white text-slate-950 rounded-2xl py-4 font-body font-semibold min-h-[56px]"
           >
             Back to Week
           </motion.button>

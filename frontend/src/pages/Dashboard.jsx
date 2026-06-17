@@ -235,7 +235,7 @@ export default function Dashboard() {
           const restTile = d.rest;
           // Completed days stay openable (to review the summary) even when "locked".
           const locked = !restTile && !isUnlocked(d.day) && rawStatus !== "done";
-          const disabled = restTile || locked;
+          const disabled = locked; // rest day is tappable → active-recovery check-in
           return (
             <motion.button
               key={d.day}
@@ -265,8 +265,8 @@ export default function Dashboard() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {!restTile && badgeStatus && <StatusBadge status={badgeStatus} testId={`day-status-${d.label.toLowerCase()}`} />}
-                {!restTile && (locked ? <Lock className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-600" />)}
+                {badgeStatus && (!restTile || badgeStatus === "done") && <StatusBadge status={badgeStatus} testId={`day-status-${d.label.toLowerCase()}`} />}
+                {locked ? <Lock className="w-4 h-4 text-slate-600" /> : <ChevronRight className="w-4 h-4 text-slate-600" />}
               </div>
             </motion.button>
           );

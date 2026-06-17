@@ -10,6 +10,8 @@ import {
 } from "@/lib/storage";
 import { applyTheme } from "@/lib/theme";
 import { shareOrDownload } from "@/lib/share";
+import QrScanner from "@/components/QrScanner";
+import { QrCode } from "lucide-react";
 
 const PAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
 const fmtMMSS = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
@@ -26,6 +28,7 @@ export default function Settings() {
   const [attempts, setAttempts] = useState(0);
   const [error, setError] = useState("");
   const [dataMsg, setDataMsg] = useState(null); // { ok, text }
+  const [scanning, setScanning] = useState(false);
   const fileRef = useRef(null);
   const [nameDraft, setNameDraft] = useState(profile?.name || "");
   const [newPin, setNewPin] = useState("");
@@ -305,6 +308,13 @@ export default function Settings() {
             <Download className="w-4 h-4" strokeWidth={1.75} /> Import
           </button>
         </div>
+        <button
+          data-testid="scan-qr-button"
+          onClick={() => setScanning(true)}
+          className="w-full mt-2 flex items-center justify-center gap-2 py-3 rounded-xl bg-slate-800 border border-slate-700 text-slate-200 font-body text-sm active:bg-slate-700 min-h-[48px]"
+        >
+          <QrCode className="w-4 h-4" strokeWidth={1.75} /> Scan a card QR
+        </button>
         <input ref={fileRef} type="file" accept="application/json,.json" onChange={onImportFile} className="hidden" data-testid="import-file" />
         {dataMsg && (
           <p className={`text-xs font-body mt-3 ${dataMsg.ok ? "text-emerald-400" : "text-rose-400"}`} data-testid="data-message">{dataMsg.text}</p>
@@ -460,6 +470,19 @@ export default function Settings() {
               )}
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {scanning && (
+          <QrScanner
+            onClose={() => setScanning(false)}
+            onResult={(parsed) => {
+              importCards(parsed.payload, pid);
+              setScanning(false);
+              setDataMsg({ ok: true, text: `Added "${parsed.name}" from QR.` });
+            }}
+          />
         )}
       </AnimatePresence>
     </div>

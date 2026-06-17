@@ -4,7 +4,7 @@ const KEY = "gym_lalu_v1";
 
 import { generateWeek } from "@/lib/weekgen";
 
-const empty = () => ({ profiles: [], progress: {}, workouts: {}, counts: {}, lastCompletionAt: {}, weeks: {}, defaultProfileId: null, settings: {}, lockouts: {}, notes: {}, customCards: {}, tutorialSeen: false });
+const empty = () => ({ profiles: [], progress: {}, workouts: {}, counts: {}, lastCompletionAt: {}, weeks: {}, defaultProfileId: null, settings: {}, lockouts: {}, notes: {}, customCards: {}, favourites: {}, tutorialSeen: false });
 
 // Per-day workout target — day is "done" at exactly this many A-card completions.
 export const POINTS_TARGET = 5;
@@ -86,6 +86,7 @@ export const load = () => {
     parsed.lockouts ||= {};
     parsed.notes ||= {};
     parsed.customCards ||= {};
+    parsed.favourites ||= {};
     if (!("tutorialSeen" in parsed)) parsed.tutorialSeen = false;
     if (!("defaultProfileId" in parsed)) parsed.defaultProfileId = null;
     return parsed;
@@ -113,6 +114,42 @@ export const addProfile = (name, pin) => {
   save(data);
   return profile;
 };
+
+// ── Favourites (pin an exercise to the front of its category) ────────────────
+export const getFavourites = (profileId) => load().favourites?.[profileId] || [];
+export const isFavourite = (profileId, exerciseId) => getFavourites(profileId).includes(exerciseId);
+export const toggleFavourite = (profileId, exerciseId) => {
+  const data = load();
+  data.favourites ||= {};
+  const list = data.favourites[profileId] || [];
+  data.favourites[profileId] = list.includes(exerciseId)
+    ? list.filter((id) => id !== exerciseId)
+    : [...list, exerciseId];
+  save(data);
+  return data.favourites[profileId].includes(exerciseId);
+};
+
+// ── Rest-day check-in (active recovery; counts toward the streak) ──────────────
+export const completeRestDay = (profileId, weekStartIso) => {
+  const data = load();
+  data.workouts[profileId] ||= {};
+  data.workouts[profileId][weekStartIso] ||= {};
+  const now = new Date().toISOString();
+  data.workouts[profileId][weekStartIso][7] = {
+    completions: [{ exerciseId: "rest", name: "Active recovery", completedAt: now }],
+    dayCompleted: true,
+    startedAt: now,
+    finishedAt: now,
+    rest: true,
+  };
+  data.progress[profileId] ||= {};
+  data.progress[profileId][weekStartIso] ||= {};
+  data.progress[profileId][weekStartIso][7] = "done";
+  save(data);
+};
+
+export const isRestDayDone = (profileId, weekStartIso) =>
+  !!load().workouts[profileId]?.[weekStartIso]?.[7]?.dayCompleted;
 
 export const renameProfile = (profileId, name) => {
   const data = load();
