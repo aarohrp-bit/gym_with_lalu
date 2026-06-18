@@ -221,7 +221,7 @@ const ensureWorkout = (data, profileId, weekStartIso, dayNum) => {
   return data.workouts[profileId][weekStartIso][dayNum];
 };
 
-export const addCompletion = (profileId, weekStartIso, dayNum, exerciseId, name) => {
+export const addCompletion = (profileId, weekStartIso, dayNum, exerciseId, name, target) => {
   const data = load();
   const w = ensureWorkout(data, profileId, weekStartIso, dayNum);
   // Prevent duplicates
@@ -244,7 +244,10 @@ export const addCompletion = (profileId, weekStartIso, dayNum, exerciseId, name)
     data.counts[profileId][exerciseId] = (data.counts[profileId][exerciseId] || 0) + 1;
   }
   data.lastCompletionAt[profileId] = new Date().toISOString();
-  if (w.completions.length >= getPointsTarget()) {
+  // `target` lets the caller cap completion at the cards actually available that day
+  // (so a high points setting on a small category can't make the day un-finishable).
+  const effectiveTarget = Math.max(1, target || getPointsTarget());
+  if (w.completions.length >= effectiveTarget) {
     w.dayCompleted = true;
     w.finishedAt = new Date().toISOString();
     data.progress[profileId] ||= {};
@@ -519,15 +522,16 @@ export const updateCustomCard = (profileId, cardId, patch) => {
 // Current consecutive-day workout streak (counts today if done, else from yesterday).
 export const getDayStreak = (profileId) => {
   const wk = load().workouts[profileId] || {};
+  const iso = (dt) =>
+    `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
   const set = new Set();
   Object.values(wk).forEach((week) =>
     Object.values(week).forEach((d) => {
-      if (d?.dayCompleted && d.finishedAt) set.add(d.finishedAt.slice(0, 10));
+      // Use the LOCAL calendar date of the completion (finishedAt is a UTC ISO string).
+      if (d?.dayCompleted && d.finishedAt) set.add(iso(new Date(d.finishedAt)));
     })
   );
   if (set.size === 0) return 0;
-  const iso = (dt) =>
-    `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
   const day = new Date();
   day.setHours(0, 0, 0, 0);
   if (!set.has(iso(day))) day.setDate(day.getDate() - 1); // today not done yet → start at yesterday

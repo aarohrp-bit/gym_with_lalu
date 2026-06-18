@@ -25,7 +25,6 @@ export default function Workout() {
   const today = todayDayNum();
   const dayUnlocked = !!week?.seed || today === 7 || dayNum === today;
   const circuitMin = Math.round(getCircuitSeconds() / 60);
-  const POINTS_TARGET = getPointsTarget();
   const displayCount = getDisplayCount();
 
   const [completedIds, setCompletedIds] = useState(() => {
@@ -83,6 +82,10 @@ export default function Workout() {
     () => allCards.filter((e) => !completedIds.has(e.id)),
     [allCards, completedIds]
   );
+
+  // Effective target can't exceed the cards actually available this day, or the day
+  // could never complete (e.g. a high points setting on a small category).
+  const POINTS_TARGET = Math.min(getPointsTarget(), allCards.length || getPointsTarget());
 
   const safeIdx = remaining.length ? Math.min(currentIdx, remaining.length - 1) : 0;
   const current = remaining[safeIdx];
@@ -153,7 +156,7 @@ export default function Workout() {
 
   const completeCurrent = () => {
     if (!current || completingId || current.type === "B" || guardActive) return;
-    addCompletion(pid, weekStart, dayNum, current.id, current.name);
+    addCompletion(pid, weekStart, dayNum, current.id, current.name, POINTS_TARGET);
     removeCard(current, "complete");
   };
 
@@ -190,7 +193,7 @@ export default function Workout() {
 
   const onCircuitFinish = () => {
     if (!current || current.type !== "B") return;
-    addCompletion(pid, weekStart, dayNum, current.id, current.name);
+    addCompletion(pid, weekStart, dayNum, current.id, current.name, POINTS_TARGET);
     setCircuitOpen(false);
     removeCard(current, "complete");
   };
@@ -325,7 +328,7 @@ export default function Workout() {
                     </div>
                     <button
                       data-testid="circuit-start-button"
-                      onClick={() => setCircuitOpen(true)}
+                      onClick={() => { beep(1, 1); setCircuitOpen(true); }}
                       className="w-full mt-4 bg-indigo-400 text-slate-950 rounded-2xl py-3.5 font-body font-semibold flex items-center justify-center gap-2 min-h-[52px] active:bg-indigo-300"
                     >
                       <Play className="w-4 h-4 fill-current" strokeWidth={2} />

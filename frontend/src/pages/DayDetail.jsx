@@ -24,9 +24,9 @@ export default function DayDetail() {
   const title = meta && !meta.rest ? categoryTitle(catId) : (meta?.title || "");
   const blurb = meta ? CATEGORY_BLURBS[meta.rest ? "Rest" : title] : null;
   const workout = pid ? getWorkout(pid, weekStart, dayNum) : null;
-  const pointsTarget = getPointsTarget();
   const poolSize = (EXERCISES[catId] || []).length + (pid && !meta?.rest ? getCustomCardsForCategory(pid, catId).length : 0);
   const aCount = Math.min(poolSize, getDisplayCount());
+  const pointsTarget = Math.min(getPointsTarget(), aCount || getPointsTarget());
   const completedCount = workout?.completions?.length || 0;
   const status = workout?.dayCompleted ? "done" : "pending";
   const today = todayDayNum();
