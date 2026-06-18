@@ -163,6 +163,8 @@ yarn deploy     # builds and pushes to the gh-pages branch
 - **React 19** + **react-router 7**
 - **Tailwind CSS 3** (dark slate + indigo theme) with **framer-motion** gestures/animations
 - **lucide-react** icons · **Barlow Condensed** + **DM Sans** fonts
+- **qrcode** (generate) + **jsQR** (scan) for card QR sharing
+- **Web Audio** for sound cues · **Canvas** for the shareable day image · **Vibration API** for haptics
 - **localStorage** for all data — no backend
 - Custom **service worker** (app-shell + image precache, offline-first)
 
@@ -180,13 +182,16 @@ frontend/
   src/
     data/exercises.js     # exercise database (names, images, coaching text, circuits)
     data/categoryBlurbs.js
-    lib/storage.js        # profiles, progress, counts, weeks, seeds, settings, custom cards
+    lib/storage.js        # profiles, progress, counts, weeks, seeds, settings, custom cards,
+                          # favourites, notes, lockouts, streak, export/import
     lib/weekgen.js        # deterministic RNG + seeded/random week generation
     lib/week.js           # Monday-based week bucketing
     lib/haptics.js        # vibration feedback
+    lib/sound.js          # Web Audio beep / chime cues
     lib/share.js          # one-tap share (Web Share API) with download fallback
+    lib/cardlink.js       # encode/decode a card into a QR-friendly deep link
     lib/theme.js          # light/dark theme application
-    components/           # CircuitRunner, NoteField, StatusBadge, ...
+    components/           # CircuitRunner, NoteField, QrScanner, StatusBadge
     pages/                # ProfileSelect, AddProfile, PinPad, Dashboard, DayDetail,
                           # Workout, Summary, Settings, Stats, CreateCard, Tutorial
 docs/preview.webp       # README preview image
