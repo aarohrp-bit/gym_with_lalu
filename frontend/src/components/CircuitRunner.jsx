@@ -135,7 +135,7 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
                     alt={current.name}
                     draggable={false}
                     data-testid="circuit-mini-image"
-                    className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
+                    className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
                     onError={(e) => { e.currentTarget.style.display = "none"; }}
                   />
                 ) : (

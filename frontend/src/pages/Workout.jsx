@@ -265,10 +265,14 @@ export default function Workout() {
         </div>
       </div>
 
-      {/* Card stack — fills remaining vertical space */}
-      <div className="flex-1 min-h-0 relative my-2" style={{ perspective: 1200 }} data-testid="card-stack">
+      {/* Card stack — a 9:16 frame (matches the images) centered in the free space */}
+      <div className="flex-1 min-h-0 my-2 flex items-center justify-center" style={{ perspective: 1200 }}>
         {!dayDone && current ? (
-          <>
+          <div
+            className="relative mx-auto"
+            style={{ aspectRatio: "9 / 16", height: "100%", maxWidth: "100%" }}
+            data-testid="card-stack"
+          >
             {/* Back peek cards */}
             {peek.map((c, i) => (
               <div
@@ -342,40 +346,42 @@ export default function Workout() {
                     className="absolute inset-0 rounded-3xl"
                     style={{ transformStyle: "preserve-3d" }}
                   >
-                    {/* Front face */}
+                    {/* Front face — image fills the 9:16 card, text overlaid */}
                     <div
-                      className="absolute inset-0 rounded-3xl bg-slate-900 border border-slate-800 p-5 flex flex-col"
+                      className="absolute inset-0 rounded-3xl overflow-hidden bg-slate-900 border border-slate-800"
                       style={{ backfaceVisibility: "hidden" }}
                       data-testid="card-front"
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500 font-body">Exercise</p>
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-slate-500 font-body" data-testid="card-position">
+                      {current.img ? (
+                        <img
+                          src={current.img}
+                          alt={current.name}
+                          draggable={false}
+                          data-testid="card-image"
+                          className="absolute inset-0 w-full h-full object-cover pointer-events-none select-none"
+                          onError={(e) => { e.currentTarget.style.display = "none"; }}
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center p-6">
+                          <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center">{current.name}</p>
+                        </div>
+                      )}
+                      {/* Top overlay: label + position */}
+                      <div className="absolute top-0 inset-x-0 flex items-start justify-between p-4 bg-gradient-to-b from-slate-950/80 to-transparent">
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-white/80 font-body">Exercise</p>
+                        <p className="text-[10px] uppercase tracking-[0.22em] text-white/80 font-body" data-testid="card-position">
                           {safeIdx + 1} of {remaining.length} left
                         </p>
                       </div>
-                      <div className="flex-1 min-h-0 rounded-2xl bg-slate-800 border border-slate-700 overflow-hidden mb-4 relative">
-                        {current.img ? (
-                          <img
-                            src={current.img}
-                            alt={current.name}
-                            draggable={false}
-                            data-testid="card-image"
-                            className="absolute inset-0 w-full h-full object-contain pointer-events-none select-none"
-                            onError={(e) => { e.currentTarget.style.display = "none"; }}
-                          />
-                        ) : (
-                          <div className="absolute inset-0 flex items-center justify-center p-6">
-                            <p className="font-body text-slate-400 text-sm uppercase tracking-wider text-center">{current.name}</p>
-                          </div>
-                        )}
+                      {/* Bottom overlay: name + hint */}
+                      <div className="absolute bottom-0 inset-x-0 p-5 pt-16 bg-gradient-to-t from-slate-950 via-slate-950/80 to-transparent">
+                        <h2 className="font-display text-3xl text-white font-bold tracking-tight leading-tight" data-testid="card-name">
+                          {current.name}
+                        </h2>
+                        <p className="text-white/55 text-[11px] font-body mt-1.5 uppercase tracking-wider">
+                          Double-tap to flip · Swipe right to finish · up / down to browse
+                        </p>
                       </div>
-                      <h2 className="font-display text-3xl text-white font-bold tracking-tight leading-tight" data-testid="card-name">
-                        {current.name}
-                      </h2>
-                      <p className="text-slate-500 text-[11px] font-body mt-1.5 uppercase tracking-wider">
-                        Double-tap to flip · Swipe right to finish · Swipe up / down to browse
-                      </p>
                     </div>
 
                     {/* Back face */}
@@ -417,7 +423,7 @@ export default function Workout() {
                 )}
               </motion.div>
             </AnimatePresence>
-          </>
+          </div>
         ) : !dayDone && !current ? (
           <div className="absolute inset-0 flex items-center justify-center text-center text-slate-400 font-body">
             <p>No more exercises available.</p>
