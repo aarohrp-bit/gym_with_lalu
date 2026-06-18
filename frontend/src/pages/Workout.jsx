@@ -218,7 +218,7 @@ export default function Workout() {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto px-5 pt-5 pb-5 min-h-screen flex flex-col select-none">
+    <div className="w-full max-w-md mx-auto px-5 pt-5 pb-5 h-screen overflow-hidden flex flex-col select-none" style={{ height: "100dvh" }}>
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <button
@@ -270,7 +270,7 @@ export default function Workout() {
         {!dayDone && current ? (
           <div
             className="relative mx-auto"
-            style={{ aspectRatio: "9 / 16", height: "100%", maxWidth: "100%" }}
+            style={{ aspectRatio: "9 / 16", width: "100%", maxHeight: "100%" }}
             data-testid="card-stack"
           >
             {/* Back peek cards */}
@@ -425,11 +425,11 @@ export default function Workout() {
             </AnimatePresence>
           </div>
         ) : !dayDone && !current ? (
-          <div className="absolute inset-0 flex items-center justify-center text-center text-slate-400 font-body">
+          <div className="text-center text-slate-400 font-body">
             <p>No more exercises available.</p>
           </div>
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center text-center text-emerald-400 font-display text-2xl tracking-tight">
+          <div className="text-center text-emerald-400 font-display text-2xl tracking-tight">
             Day complete →
           </div>
         )}
