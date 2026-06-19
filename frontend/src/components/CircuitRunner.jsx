@@ -13,18 +13,23 @@ const fmtMMSS = (s) => {
 
 export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive = false, guardRemaining = 0 }) {
   const [secondsLeft, setSecondsLeft] = useState(() => getCircuitSeconds());
+  const endRef = useRef(Date.now() + getCircuitSeconds() * 1000);
   const [idx, setIdx] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const lastTap = useRef(0);
   const mini = circuit.miniExercises;
 
-  // Tick down 1s
+  // Wall-clock countdown: derive the remaining time from a fixed end timestamp so it stays
+  // correct even when the tab is backgrounded / the screen is locked (setInterval throttles
+  // in the background, so we never just decrement a counter). Recompute on resume too.
   useEffect(() => {
-    const id = setInterval(() => {
-      setSecondsLeft((s) => (s > 0 ? s - 1 : 0));
-    }, 1000);
-    return () => clearInterval(id);
+    const compute = () => setSecondsLeft(Math.max(0, Math.ceil((endRef.current - Date.now()) / 1000)));
+    const id = setInterval(compute, 500);
+    const onVis = () => { if (!document.hidden) compute(); };
+    document.addEventListener("visibilitychange", onVis);
+    compute();
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
   }, []);
 
   // Buzz + chime when the timer hits zero (Finish unlocks).

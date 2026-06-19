@@ -95,8 +95,11 @@ export default function Workout() {
   const guardSeconds = useMemo(() => getGuardSeconds(), []);
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
+    const tick = () => setNow(Date.now());
+    const id = setInterval(tick, 1000);
+    const onVis = () => { if (!document.hidden) tick(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
   }, []);
   const lastAt = pid ? getLastCompletionAt(pid) : null;
   const lastMs = lastAt ? new Date(lastAt).getTime() : 0;
