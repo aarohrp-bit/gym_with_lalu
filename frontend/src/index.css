@@ -6,6 +6,8 @@ html, body, #root {
     margin: 0;
     min-height: 100%;
     background: #020617;
+    /* Kill pull-to-refresh / overscroll bounce app-wide (must be on html too). */
+    overscroll-behavior: none;
 }
 
 body {
@@ -13,7 +15,7 @@ body {
     color: #FFFFFF;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    overscroll-behavior-y: none;
+    overscroll-behavior: none;
 }
 
 /* Native-app feel: no text selection, no long-press callout, no tap highlight. */

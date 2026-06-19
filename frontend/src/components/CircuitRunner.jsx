@@ -50,10 +50,14 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
   };
 
   const onDragEnd = (_, info) => {
-    if (info.offset.x < -80 && idx < mini.length - 1) {
+    const { offset } = info;
+    const horizontal = Math.abs(offset.x) > Math.abs(offset.y);
+    const next = horizontal ? offset.x < -70 : offset.y < -70;   // swipe left or up
+    const prev = horizontal ? offset.x > 70 : offset.y > 70;     // swipe right or down
+    if (next && idx < mini.length - 1) {
       setIdx((i) => i + 1);
       setFlipped(false);
-    } else if (info.offset.x > 80 && idx > 0) {
+    } else if (prev && idx > 0) {
       setIdx((i) => i - 1);
       setFlipped(false);
     }
@@ -66,6 +70,7 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
   return (
     <div
       className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center select-none"
+      style={{ overscrollBehavior: "none", touchAction: "none" }}
       data-testid="circuit-overlay"
       role="dialog"
       aria-modal="true"
@@ -104,11 +109,10 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
 
         <motion.div
           key={idx}
-          drag="x"
+          drag
           dragDirectionLock
-          dragConstraints={{ left: 0, right: 0 }}
           dragSnapToOrigin
-          dragElastic={0.35}
+          dragElastic={0.4}
           onDragEnd={onDragEnd}
           onTap={handleTap}
           initial={{ opacity: 0, x: 20 }}
