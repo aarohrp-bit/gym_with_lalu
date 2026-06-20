@@ -364,6 +364,9 @@ export const deleteProfile = (profileId) => {
   delete data.lastCompletionAt[profileId];
   delete data.weeks[profileId];
   delete data.lockouts[profileId];
+  delete data.notes[profileId];
+  delete data.customCards[profileId];
+  if (data.favourites) delete data.favourites[profileId];
   if (data.defaultProfileId === profileId) data.defaultProfileId = null;
   save(data);
 };
@@ -428,6 +431,7 @@ export const exportProfile = (profileId) => {
     weeks: data.weeks[profileId] || {},
     notes: data.notes[profileId] || {},
     customCards: data.customCards[profileId] || [],
+    favourites: data.favourites?.[profileId] || [],
     lastCompletionAt: data.lastCompletionAt[profileId] || null,
   };
 };
@@ -462,6 +466,8 @@ export const importProfile = (payload) => {
   data.weeks[prof.id] = payload.weeks || {};
   data.notes[prof.id] = payload.notes || {};
   data.customCards[prof.id] = Array.isArray(payload.customCards) ? payload.customCards : [];
+  data.favourites ||= {};
+  data.favourites[prof.id] = Array.isArray(payload.favourites) ? payload.favourites : [];
   if (payload.lastCompletionAt) data.lastCompletionAt[prof.id] = payload.lastCompletionAt;
   save(data);
   return prof;

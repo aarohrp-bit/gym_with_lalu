@@ -295,7 +295,7 @@ export default function Workout() {
                 key={current.id}
                 custom={action}
                 data-testid={`workout-card-${current.id}`}
-                drag={!completingId}
+                drag={!completingId && !flipped}
                 dragDirectionLock
                 dragSnapToOrigin
                 dragElastic={0.35}
@@ -306,7 +306,7 @@ export default function Workout() {
                 animate="center"
                 exit="exit"
                 transition={{ type: "spring", stiffness: 320, damping: 32 }}
-                className="absolute inset-0 rounded-3xl cursor-grab active:cursor-grabbing touch-none"
+                className={`absolute inset-0 rounded-3xl cursor-grab active:cursor-grabbing ${flipped ? "" : "touch-none"}`}
                 style={{ transformStyle: "preserve-3d" }}
               >
                 {current.type === "B" ? (
@@ -389,7 +389,7 @@ export default function Workout() {
 
                     {/* Back face */}
                     <div
-                      className="absolute inset-0 rounded-3xl bg-indigo-500/5 border border-indigo-500/40 p-6 flex flex-col overflow-y-auto"
+                      className="absolute inset-0 rounded-3xl bg-indigo-500/5 border border-indigo-500/40 p-6 flex flex-col overflow-y-auto overscroll-contain"
                       style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}
                       data-testid="card-back"
                     >
