@@ -52,7 +52,7 @@ of **points** each day. It installs to your phone’s home screen, opens fullscr
 | ⏱️ | **Timed circuits (Type B)** | Start a circuit, train along the countdown, and Finish when it hits zero. |
 | 🛡️ | **Recovery lock** | A cooldown between completions so you can’t accidentally blow through a day. |
 | 🌱 | **Seeds** | You and a friend type the same seed and get an identical week — deterministic on any device. |
-| ✍️ | **Custom cards** | Add your own exercises (photo + how-to + category); share by **file, link, or QR**, and **scan a QR** to import. |
+| ✍️ | **Custom cards & circuits** | Build your own **exercises** (photo + how-to) or **Type-B circuits** (multi-move); share by **file, link, or QR**, and **scan a QR** to import. |
 | ⭐ | **Pin favourites** | Star an exercise to pin it to the front of its category. |
 | 💆 | **Rest-day check-in** | Log active recovery on Sunday to keep your streak alive. |
 | 📊 | **Stats & streaks** | Workouts done, favourite focus, most/least-done exercise, and a day-streak badge. |
@@ -109,11 +109,14 @@ Open **Enter seed** on the dashboard and type any word/number. Anyone who types 
 seed** gets the exact same week — same days, same card order. A seed lasts one week; clear it
 or start a new week to go back to your personalized plan.
 
-### 6 · Custom cards
-Tap **➕** on the dashboard to **Make a card**:
-1. Pick a **portrait (~9:16) photo** — off-ratio images are rejected so cards stay consistent.
-2. Add a **name**, **how to perform**, **what it does**, and a **category**.
-3. Save — it joins that category’s pool. **Edit** (✏️), **delete** (🗑️), or share it any time.
+### 6 · Custom cards & circuits
+Tap **➕** on the dashboard to **Make a card**, then pick **Exercise** or **Circuit**:
+- **Exercise (Type A):** a **portrait ~9:16 photo** (off-ratio is rejected), a **name**,
+  **how to perform**, **what it does**, and a **category**.
+- **Circuit (Type B):** a name, a category, and **2–10 mini-moves** (each with a name, an
+  optional how-to, and an optional photo) — it plays through the timed circuit runner.
+
+It joins that category’s pool. **Edit** (✏️), **delete** (🗑️), or share it any time.
 
 **Sharing a card three ways:**
 - **📷 QR code** — tap the QR button on a card to show a code. A friend points their phone
