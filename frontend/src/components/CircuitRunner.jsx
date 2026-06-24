@@ -18,7 +18,7 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
   const [flipped, setFlipped] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const lastTap = useRef(0);
-  const mini = circuit.miniExercises;
+  const mini = circuit?.miniExercises || [];
 
   // Wall-clock countdown: derive the remaining time from a fixed end timestamp so it stays
   // correct even when the tab is backgrounded / the screen is locked (setInterval throttles
@@ -70,7 +70,17 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
 
   const canFinish = secondsLeft <= 0 && !guardActive;
   const fmtGuard = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-  const current = mini[idx];
+  const current = mini[Math.min(idx, mini.length - 1)];
+
+  // Defensive: a malformed/empty circuit (e.g. a bad import) — let the user back out.
+  if (!current) {
+    return (
+      <div className="fixed inset-0 z-50 bg-slate-950 flex flex-col items-center justify-center px-6 select-none" data-testid="circuit-overlay">
+        <p className="font-body text-slate-300 text-center mb-5">This circuit has no exercises.</p>
+        <button onClick={onAbort} className="px-5 py-3 rounded-2xl bg-slate-800 border border-slate-700 text-white font-body font-medium min-h-[48px]">Close</button>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -169,14 +179,21 @@ export default function CircuitRunner({ circuit, onAbort, onFinish, guardActive 
                 <RotateCw className="w-3.5 h-3.5 text-indigo-300/60" strokeWidth={1.5} />
               </div>
               <h3 className="font-display text-2xl text-white font-bold tracking-tight leading-tight mb-4">{current.name}</h3>
-              <div className="mb-4">
-                <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-300/80 font-body mb-1.5">How to perform</p>
-                <p className="font-body text-slate-200 text-sm leading-relaxed">{current.howTo}</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-300/80 font-body mb-1.5">What it does</p>
-                <p className="font-body text-slate-300 text-sm leading-relaxed">{current.whatItDoes}</p>
-              </div>
+              {current.howTo && (
+                <div className="mb-4">
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-300/80 font-body mb-1.5">How to perform</p>
+                  <p className="font-body text-slate-200 text-sm leading-relaxed">{current.howTo}</p>
+                </div>
+              )}
+              {current.whatItDoes && (
+                <div>
+                  <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-300/80 font-body mb-1.5">What it does</p>
+                  <p className="font-body text-slate-300 text-sm leading-relaxed">{current.whatItDoes}</p>
+                </div>
+              )}
+              {!current.howTo && !current.whatItDoes && (
+                <p className="font-body text-slate-400 text-sm">No coaching notes for this move.</p>
+              )}
               <p className="text-slate-500 text-xs font-body mt-auto uppercase tracking-wider">Double-tap to flip back</p>
             </div>
           </motion.div>

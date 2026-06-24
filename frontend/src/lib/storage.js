@@ -474,14 +474,47 @@ export const importProfile = (payload) => {
 };
 
 // ── Custom cards (user-made exercises) ────────────────────────────────────────
-// customCards[profileId] = [{ id, category(1-6), name, howTo, whatItDoes, img(dataURL), createdAt }]
+// A: { id, type:'A', category, name, howTo, whatItDoes, img, createdAt }
+// B: { id, type:'B', category, name, miniExercises:[{name,howTo,whatItDoes,img}], createdAt }
 export const getCustomCards = (profileId) => load().customCards?.[profileId] || [];
+
+// Normalize a raw card object into stored shape (handles A and B).
+const normalizeCustomCard = (card) => {
+  const id = card.id || `c_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const createdAt = card.createdAt || new Date().toISOString();
+  const category = Number(card.category) || 1;
+  if (card.type === "B") {
+    return {
+      id, type: "B", category,
+      name: String(card.name || "").trim() || "Custom circuit",
+      miniExercises: (card.miniExercises || []).map((m) => ({
+        name: String(m.name || "").trim() || "Move",
+        howTo: String(m.howTo || "").trim(),
+        whatItDoes: String(m.whatItDoes || "").trim(),
+        img: m.img || null,
+      })),
+      createdAt,
+    };
+  }
+  return {
+    id, type: "A", category,
+    name: String(card.name || "").trim() || "Custom exercise",
+    howTo: String(card.howTo || "").trim(),
+    whatItDoes: String(card.whatItDoes || "").trim(),
+    img: card.img || null,
+    createdAt,
+  };
+};
 
 export const getCustomCardsForCategory = (profileId, category) =>
   getCustomCards(profileId)
     .filter((c) => Number(c.category) === Number(category))
-    // shape them like built-in A cards for the workout pool
-    .map((c) => ({ id: c.id, day: Number(c.category), name: c.name, type: "A", img: c.img, howTo: c.howTo, whatItDoes: c.whatItDoes, custom: true }));
+    // shape them like built-in cards for the workout pool
+    .map((c) =>
+      c.type === "B"
+        ? { id: c.id, day: Number(c.category), name: c.name, type: "B", circuit: { name: c.name, miniExercises: c.miniExercises || [] }, custom: true }
+        : { id: c.id, day: Number(c.category), name: c.name, type: "A", img: c.img, howTo: c.howTo, whatItDoes: c.whatItDoes, custom: true }
+    );
 
 export const addCustomCard = (profileId, card) => {
   const data = load();
@@ -489,15 +522,7 @@ export const addCustomCard = (profileId, card) => {
   if (data.customCards[profileId].length >= MAX_CUSTOM_CARDS) {
     throw new Error(`Custom card limit reached (max ${MAX_CUSTOM_CARDS}).`);
   }
-  const full = {
-    id: card.id || `c_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    category: Number(card.category),
-    name: String(card.name || "").trim() || "Custom exercise",
-    howTo: String(card.howTo || "").trim(),
-    whatItDoes: String(card.whatItDoes || "").trim(),
-    img: card.img || null,
-    createdAt: card.createdAt || new Date().toISOString(),
-  };
+  const full = normalizeCustomCard(card);
   data.customCards[profileId].push(full);
   save(data);
   return full;
@@ -516,11 +541,8 @@ export const updateCustomCard = (profileId, cardId, patch) => {
   const list = data.customCards[profileId] || [];
   const idx = list.findIndex((c) => c.id === cardId);
   if (idx === -1) return null;
-  list[idx] = {
-    ...list[idx],
-    ...patch,
-    category: Number(patch.category ?? list[idx].category),
-  };
+  // Re-normalize so a type switch / mini edits are stored cleanly.
+  list[idx] = normalizeCustomCard({ ...list[idx], ...patch, id: cardId, createdAt: list[idx].createdAt });
   save(data);
   return list[idx];
 };
@@ -566,15 +588,10 @@ export const importCards = (payload, profileId) => {
   let added = 0;
   for (const c of payload.cards) {
     if (data.customCards[profileId].length >= MAX_CUSTOM_CARDS) break;
-    data.customCards[profileId].push({
-      id: `c_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-      category: Number(c.category) || 1,
-      name: String(c.name || "Imported exercise").trim(),
-      howTo: String(c.howTo || "").trim(),
-      whatItDoes: String(c.whatItDoes || "").trim(),
-      img: c.img || null,
-      createdAt: new Date().toISOString(),
-    });
+    // normalizeCustomCard handles both A and B and assigns a fresh id.
+    data.customCards[profileId].push(
+      normalizeCustomCard({ ...c, id: undefined, createdAt: undefined, name: c.name || "Imported" })
+    );
     added++;
   }
   save(data);

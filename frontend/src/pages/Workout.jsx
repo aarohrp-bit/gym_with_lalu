@@ -323,7 +323,11 @@ export default function Workout() {
                       {current.circuit?.name || current.name}
                     </h2>
                     <p className="text-slate-400 text-xs font-body mb-4">{circuitMin}-minute timed sub-stack · {current.circuit?.miniExercises?.length || 6} exercises</p>
-                    <div className="flex-1 overflow-y-auto">
+                    <div
+                      className="flex-1 overflow-y-auto overscroll-contain"
+                      style={{ touchAction: "pan-y" }}
+                      onPointerDownCapture={(e) => e.stopPropagation()}
+                    >
                       <div className="flex flex-col gap-1.5" data-testid="circuit-mini-list">
                         {(current.circuit?.miniExercises || []).map((m, i) => (
                           <div key={m.name} className="flex items-center gap-2 text-sm font-body text-slate-200 bg-slate-900/60 border border-slate-800 rounded-xl px-3 py-2">
